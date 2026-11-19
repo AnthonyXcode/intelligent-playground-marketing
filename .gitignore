@@ -1,0 +1,25 @@
+# OS / Office
+.DS_Store
+~$*
+
+# Dependencies and build output
+node_modules/
+dist/
+.venv/
+__pycache__/
+
+# Secrets: Gmail login session used by the mailer. Never commit.
+_build/mailer/.profile/
+_build/mailer/error.png
+
+# Unblurred source photos (show a client school's crest)
+_build/originals/
+
+# Generated renders, screenshots and caches
+_build/ppt/render/
+_build/ppt/img/
+_build/html/
+
+# Local backups made while editing
+_build/index.before-*.html
+_build/ppt/build.before-*.js

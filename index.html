@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intelligent Playground 智能運動場</title>
+<meta name="description" content="Intelligent Playground 智能運動場：放在校園的 AI 運動站，將運動變成有趣的學習體驗。AI 即時計數，幫助學生達到每日 60 分鐘中等至高強度體育活動（MVPA60），成績自動記錄到教師後台。">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="assets/mascot-icon-128.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --court:#0B6374;      /* deck dark teal: court floor */
+  --court-2:#0D687A;    /* app teal */
+  --court-deep:#073F4A;
+  --mint:#8DD8D3;
+  --tape:#F9A825;       /* amber: court tape, CTA */
+  --coral:#FD5B58;
+  --kiosk:#0064C6;
+  --paper:#F5F9F8;
+  --surface:#FFFFFF;
+  --ink:#12292F;
+  --ink-2:#3C565C;
+  --line:#D3E4E2;
+  --on-court:#FFFFFF;
+  --on-court-2:#CFEDEA;
+  --focus:#0064C6;
+  --radius-s:6px; --radius-m:14px; --radius-l:28px;
+  --gutter:clamp(16px,4vw,48px);
+  --max:1200px;
+  --font:"Nunito","Noto Sans TC",system-ui,-apple-system,"PingFang HK","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0C1D21; --surface:#12282D; --ink:#E7F3F1; --ink-2:#A9C4C1; --line:#24434A;
+    --court:#0A4C59; --court-deep:#06323B; --focus:#8DD8D3;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0C1D21; --surface:#12282D; --ink:#E7F3F1; --ink-2:#A9C4C1; --line:#24434A;
+  --court:#0A4C59; --court-deep:#06323B; --focus:#8DD8D3;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.7;overflow-x:hidden}
+img,video,svg{display:block;max-width:100%}
+img{height:auto}
+a{color:inherit}
+h1,h2,h3{line-height:1.25;margin:0;font-weight:900;letter-spacing:0}
+p{margin:0}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 var(--gutter)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;background:var(--tape);color:#1d1400;padding:8px 14px;border-radius:8px;font-weight:800;z-index:100}
+.skip:focus{top:12px}
+.en{font-family:"Nunito",system-ui,sans-serif;font-weight:700;color:var(--ink-2);font-size:.95rem;letter-spacing:.01em}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:.5em;min-height:48px;padding:.7em 1.4em;border-radius:999px;font-weight:800;font-size:1rem;text-decoration:none;border:2px solid transparent;cursor:pointer;font-family:inherit;transition:transform .15s ease, background-color .15s ease}
+.btn:hover{transform:translateY(-1px)}
+.btn-tape{background:var(--tape);color:#231700}
+.btn-tape:hover{background:#FFBA09}
+.btn-ghost{border-color:currentColor;color:inherit;background:transparent}
+.btn-ghost:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+
+/* header */
+.top{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:900;line-height:1.1}
+.brand img{width:40px;height:40px;border-radius:10px}
+.brand small{display:block;font-weight:700;font-size:.72rem;color:var(--ink-2)}
+.nav{display:flex;gap:4px;align-items:center}
+.nav a{text-decoration:none;font-weight:700;font-size:.95rem;padding:8px 12px;border-radius:999px;color:var(--ink-2)}
+.nav a:hover{color:var(--ink);background:color-mix(in srgb,var(--court) 10%,transparent)}
+.nav .btn{padding:.45em 1.1em;min-height:40px;color:#231700;margin-left:6px}
+@media (max-width:900px){.nav a:not(.btn){display:none}}
+
+/* hero: the court */
+.hero{position:relative;background:var(--court);color:var(--on-court);overflow:hidden;isolation:isolate}
+.hero::before{ /* painted court lines */
+  content:"";position:absolute;inset:0;z-index:-1;opacity:.5;
+  background:
+   radial-gradient(circle at 78% 120%, transparent 0 239px, rgba(141,216,211,.55) 240px 243px, transparent 244px),
+   linear-gradient(90deg, transparent calc(74% - 2px), rgba(141,216,211,.35) calc(74% - 2px) calc(74% + 1px), transparent calc(74% + 1px)); /* centre line sits clear of the text column */
+}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,46rem);gap:clamp(32px,5vw,72px);align-items:center;padding-top:clamp(48px,7vw,96px);padding-bottom:clamp(56px,7vw,104px)}
+.hero h1{font-size:clamp(2.3rem,5.4vw,4.4rem);line-height:1.12;font-weight:900}
+.hero h1 .line{display:block}
+.hero h1 .count{color:var(--tape);font-variant-numeric:tabular-nums}
+.hero .lede{margin-top:24px;font-size:clamp(1.05rem,1.6vw,1.2rem);color:var(--on-court-2);max-width:34em}
+.hero .en-sub{margin-top:14px;color:var(--mint);font-weight:700;font-size:.98rem;font-family:"Nunito",sans-serif}
+.hero .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.hero .btn-ghost{color:#fff}
+.hero-facts{display:flex;flex-wrap:wrap;gap:8px 22px;margin:36px 0 0;padding:0;list-style:none;color:var(--on-court-2);font-weight:700;font-size:.95rem}
+.hero-facts li{display:flex;align-items:center;gap:8px}
+.hero-facts li::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--tape)}
+
+
+/* section shell */
+section{scroll-margin-top:72px}
+.sec{padding:clamp(64px,9vw,120px) 0}
+.sec-head{max-width:40em;margin-bottom:clamp(32px,5vw,56px)}
+.sec-head h2{font-size:clamp(1.9rem,3.6vw,2.9rem)}
+.sec-head p{margin-top:14px;color:var(--ink-2);font-size:1.08rem}
+.sec-head .en{display:block;margin-top:6px}
+
+/* why */
+.why .wrap{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(32px,6vw,80px);align-items:center}
+.sixty{display:flex;align-items:baseline;gap:12px;font-weight:900;color:var(--court);line-height:1}
+:root[data-theme="dark"] .sixty{color:var(--mint)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .sixty{color:var(--mint)}}
+.sixty b{font-size:clamp(6rem,15vw,11rem);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.sixty span{font-size:clamp(1.6rem,3vw,2.4rem)}
+.why h2{font-size:clamp(1.7rem,3vw,2.4rem);margin-top:8px;text-wrap:balance}
+.sec-head h2,.hero h1{text-wrap:balance}
+.why .who{margin-top:14px;color:var(--ink-2)}
+.gap-list{list-style:none;margin:28px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:2px solid var(--ink)}
+.gap-list li{padding:16px 12px 16px 0;border-bottom:1px solid var(--line);font-weight:700}
+.gap-list li:nth-child(odd){padding-right:16px;border-right:1px solid var(--line)}
+.gap-list li:nth-child(even){padding-left:16px}
+.why figure{margin:0;position:relative}
+.why figure img{border-radius:var(--radius-l);aspect-ratio:4/3;object-fit:cover;width:100%}
+.why figcaption{margin-top:10px;font-size:.85rem;color:var(--ink-2)}
+.policy{margin-top:22px;padding:16px 18px;border-left:6px solid var(--tape);background:var(--surface);border-radius:0 var(--radius-m) var(--radius-m) 0;font-size:.98rem}
+.policy strong{font-weight:900}
+
+/* pillars */
+.pillars{background:var(--surface);border-block:1px solid var(--line)}
+.pillar-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
+.pillar{padding:8px clamp(18px,3vw,40px) 8px;border-left:1px solid var(--line)}
+.pillar:first-child{border-left:0;padding-left:0}
+.pillar .glyph{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;margin-bottom:22px}
+.pillar:nth-child(1) .glyph{background:var(--tape)}
+.pillar:nth-child(2) .glyph{background:var(--court-2)}
+.pillar:nth-child(3) .glyph{background:var(--kiosk)}
+.pillar .glyph img{width:46px;height:46px}
+.pillar .glyph svg{width:34px;height:34px}
+.pillar h3{font-size:1.45rem}
+.pillar .en{display:block;margin:2px 0 12px}
+.pillar p{color:var(--ink-2)}
+.privacy{margin-top:clamp(40px,5vw,64px);display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start;padding:24px;border-radius:var(--radius-m);background:color-mix(in srgb,var(--mint) 22%,var(--surface));}
+.privacy svg{width:40px;height:40px;color:var(--court)}
+:root[data-theme="dark"] .privacy svg{color:var(--mint)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .privacy svg{color:var(--mint)}}
+.privacy h3{font-size:1.15rem;margin-bottom:6px}
+.privacy p{color:var(--ink-2);font-size:.98rem}
+
+/* how: a running lane */
+.how{background:var(--court-deep);color:var(--on-court)}
+.how .sec-head p,.how .en{color:var(--on-court-2)}
+.lane{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(16px,2.5vw,32px);counter-reset:step}
+.lane li{position:relative}
+.lane .shot{border-radius:var(--radius-m);overflow:hidden;aspect-ratio:16/10;background:#000;border:1px solid rgba(255,255,255,.12)}
+.lane .shot img{width:100%;height:100%;object-fit:cover}
+.lane .num{display:flex;align-items:center;gap:14px;margin:22px 0 10px}
+.lane .num b{flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:var(--tape);color:#231700;display:grid;place-items:center;font-size:1.3rem;font-weight:900}
+.lane .num::after{content:"";flex:1;height:0;border-top:3px dashed rgba(141,216,211,.45)}
+.lane li:last-child .num::after{border-top-style:solid;border-color:var(--tape);flex:0 0 18px}
+.lane h3{font-size:1.4rem}
+.lane p{color:var(--on-court-2);margin-top:6px}
+.how-note{margin-top:36px;color:var(--on-court-2);font-size:.95rem}
+
+/* exercises */
+.ex-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;list-style:none;margin:0;padding:0}
+.ex{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 8px 14px;border-radius:var(--radius-m);background:var(--court-2);color:#fff;text-align:center;font-weight:800}
+.ex img,.ex svg{width:64px;height:64px}
+.ex.game{background:var(--kiosk)}
+.ex .tag{font-size:.72rem;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.18)}
+.ex-legend{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 18px;font-weight:700;color:var(--ink-2);font-size:.95rem}
+.ex-legend span{display:inline-flex;align-items:center;gap:8px}
+.ex-legend i{width:14px;height:14px;border-radius:4px;background:var(--court-2)}
+.ex-legend i.g{background:var(--kiosk)}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:clamp(40px,5vw,56px);border:2px solid var(--ink);border-radius:var(--radius-m);overflow:hidden}
+.mode{padding:22px 22px 24px;border-left:2px solid var(--ink)}
+.mode:first-child{border-left:0}
+.mode h3{font-size:1.25rem}
+.mode .en{display:block;font-size:.85rem}
+.mode p{margin-top:10px;color:var(--ink-2);font-size:.97rem}
+.ex-foot{margin-top:18px;font-size:.9rem;color:var(--ink-2)}
+
+/* deployment */
+.deploy-grid{display:grid;grid-template-columns:1.1fr .9fr .9fr;grid-template-rows:auto auto;gap:12px}
+.deploy-grid figure{margin:0;position:relative;border-radius:var(--radius-m);overflow:hidden;background:var(--line)}
+.deploy-grid img{width:100%;height:100%;object-fit:cover}
+.deploy-grid figure:first-child{grid-row:span 2}
+.deploy-grid figcaption{position:absolute;left:10px;bottom:10px;background:rgba(10,30,34,.82);color:#fff;font-size:.85rem;font-weight:700;padding:4px 10px;border-radius:8px}
+.spec{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:28px;border-top:2px solid var(--ink)}
+.spec div{padding:16px 16px 0 0}
+.spec dt{font-size:.85rem;color:var(--ink-2);font-weight:700}
+.spec dd{margin:4px 0 0;font-weight:800}
+
+/* dashboard mock */
+.dash-sec{background:var(--surface);border-block:1px solid var(--line)}
+.dash-wrap{display:grid;grid-template-columns:.8fr 1.6fr;gap:clamp(28px,4vw,56px);align-items:start}
+.dash-points{list-style:none;margin:0;padding:0}
+.dash-points li{padding:14px 0;border-bottom:1px solid var(--line)}
+.dash-points strong{display:block;font-weight:900}
+.dash-points span{color:var(--ink-2);font-size:.95rem}
+.browser{border-radius:16px;border:1px solid #C9D6D9;background:#F4F6F5;box-shadow:0 30px 60px -30px rgba(7,63,74,.45);overflow:hidden;color:#1E2B2E;position:relative;font-size:14px;line-height:1.45}
+.browser .bar{display:flex;align-items:center;gap:6px;padding:10px 14px;background:#E6ECEB;border-bottom:1px solid #D2DCDB}
+.browser .bar i{width:10px;height:10px;border-radius:50%;background:#C4CFCE}
+.browser .bar span{margin-left:10px;flex:1;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;color:#5A6B6E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.demo-stamp{position:absolute;top:6px;right:12px;z-index:2;background:var(--coral);color:#fff;font-weight:900;font-size:.9rem;padding:4px 12px;border-radius:999px;transform:rotate(3deg)}
+.dash{padding:18px;display:grid;gap:12px}
+.dash-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.dash-top h3{font-size:1.1rem;font-weight:900}
+.dash-top .range{font-size:12px;color:#5A6B6E;background:#fff;border:1px solid #D7E0DF;border-radius:8px;padding:4px 10px}
+.dash-top .print{font-size:12px;font-weight:800;color:#0064C6;background:#fff;border:1px solid #BcD3EA;border-radius:8px;padding:4px 10px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kpi{background:#fff;border-radius:10px;padding:12px;border:1px solid #E1E8E7}
+.kpi small{display:block;color:#5A6B6E;font-size:12px}
+.kpi b{font-size:1.6rem;font-weight:900;color:#0B6374;font-variant-numeric:tabular-nums}
+.kpi b em{font-style:normal;font-size:.8rem;font-weight:700;color:#5A6B6E;margin-left:3px}
+.panels{display:grid;grid-template-columns:1.1fr 1fr;gap:10px}
+.panel{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid #E1E8E7;min-width:0}
+.panel h4{margin:0 0 10px;font-size:13px;font-weight:900}
+.bars{display:grid;gap:7px}
+.bar-row{display:grid;grid-template-columns:28px 1fr 38px;align-items:center;gap:8px;font-size:12px}
+.bar-row .track{height:12px;background:#EAF1F0;border-radius:4px;overflow:hidden}
+.bar-row .fill{height:100%;background:#0D687A;border-radius:4px}
+.bar-row .v{text-align:right;font-variant-numeric:tabular-nums;color:#3C565C}
+.heat{display:grid;grid-template-columns:44px repeat(5,1fr);gap:3px;font-size:11px;color:#5A6B6E}
+.heat .h{text-align:center}
+.heat .c{aspect-ratio:1.6;border-radius:3px}
+.heat .rl{display:flex;align-items:center}
+.heat-key{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:#5A6B6E}
+.heat-key i{width:14px;height:10px;border-radius:2px}
+.rank{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:12.5px}
+.rank li{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;padding:5px 8px;border-radius:6px;background:#F3F8F7}
+.rank li:first-child{background:#FFF3D6}
+.rank b{font-weight:900;color:#0B6374;text-align:center}
+.rank span:last-child{font-variant-numeric:tabular-nums;color:#3C565C}
+.dist{display:flex;align-items:flex-end;gap:6px;height:96px;padding-top:6px;border-bottom:1px solid #D7E0DF}
+.dist div{flex:1;background:#8DD8D3;border-radius:4px 4px 0 0;position:relative}
+.dist-l{display:flex;gap:6px;font-size:10.5px;color:#5A6B6E;margin-top:4px}
+.dist-l span{flex:1;text-align:center}
+.dash-note{font-size:.88rem;color:var(--ink-2);margin-top:14px}
+
+/* funding */
+.fund-list{list-style:none;margin:0;padding:0;border-top:2px solid var(--ink)}
+.fund{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.3fr;gap:20px;padding:26px 0;border-bottom:1px solid var(--line);align-items:start}
+.fund h3{font-size:1.25rem}
+.fund .circ{display:block;font-size:.85rem;color:var(--ink-2);font-weight:700;margin-top:4px}
+.fund dt{font-size:.82rem;color:var(--ink-2);font-weight:700}
+.fund dd{margin:2px 0 0;font-weight:800}
+.fund .amt{font-size:1.6rem;font-weight:900;color:var(--court);font-variant-numeric:tabular-nums;line-height:1.2}
+:root[data-theme="dark"] .fund .amt{color:var(--mint)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fund .amt{color:var(--mint)}}
+.deadline{display:inline-block;margin-top:8px;background:var(--coral);color:#fff;font-size:.8rem;font-weight:900;padding:2px 10px;border-radius:999px}
+.fund p{color:var(--ink-2);font-size:.95rem}
+.fund-notes{margin-top:22px;display:grid;gap:6px;color:var(--ink-2);font-size:.95rem}
+.fund-notes .official{font-weight:800;color:var(--ink)}
+
+/* steps (timeline) */
+.steps{list-style:none;margin:clamp(40px,5vw,64px) 0 0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:0;counter-reset:s}
+.steps li{position:relative;padding:34px 14px 0 0;font-weight:800;counter-increment:s}
+.steps li::before{content:counter(s);position:absolute;top:0;left:0;width:26px;height:26px;border-radius:50%;background:var(--court);color:#fff;display:grid;place-items:center;font-size:.85rem;font-weight:900;z-index:1}
+.steps li::after{content:"";position:absolute;top:12px;left:26px;right:0;border-top:2px solid var(--line)}
+.steps li:last-child::after{display:none}
+.steps-title{font-size:1.2rem;margin-top:clamp(40px,5vw,64px)}
+.steps-title + .steps{margin-top:18px}
+
+/* faq */
+.faq-list{max-width:820px;border-top:2px solid var(--ink)}
+.faq-list details{border-bottom:1px solid var(--line)}
+.faq-list summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:16px;align-items:center;padding:20px 0;font-weight:800;font-size:1.1rem}
+.faq-list summary::-webkit-details-marker{display:none}
+.faq-list summary::after{content:"";flex:0 0 14px;height:14px;background:
+  linear-gradient(currentColor,currentColor) center/14px 3px no-repeat,
+  linear-gradient(currentColor,currentColor) center/3px 14px no-repeat;transition:transform .2s ease}
+.faq-list details[open] summary::after{transform:rotate(45deg)}
+.faq-list .a{padding:0 0 22px;color:var(--ink-2);max-width:46em}
+
+/* contact */
+.contact{background:var(--court);color:var(--on-court);position:relative;overflow:hidden;isolation:isolate}
+.contact::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.45;background:radial-gradient(circle at 0% 0%, transparent 0 279px, rgba(141,216,211,.55) 280px 283px, transparent 284px)}
+.contact .wrap{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(32px,5vw,72px);align-items:start}
+.contact h2{font-size:clamp(2rem,4vw,3.2rem)}
+.contact .lede{margin-top:14px;color:var(--on-court-2);font-size:1.1rem}
+.contact ul{margin:26px 0 0;padding:0;list-style:none;display:grid;gap:10px;font-weight:700}
+.contact ul li{display:flex;gap:10px;align-items:baseline}
+.contact ul li::before{content:"";flex:0 0 10px;height:10px;border-radius:2px;background:var(--tape);transform:translateY(-1px)}
+.contact .direct{margin-top:28px;font-size:1rem;color:var(--on-court-2)}
+.contact .direct a{color:#fff;font-weight:800}
+.contact .photo{margin-top:28px;border-radius:var(--radius-m);overflow:hidden;aspect-ratio:4/3;max-width:420px}
+.contact .photo img{width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+form.demo{background:var(--surface);color:var(--ink);border-radius:var(--radius-l);padding:clamp(20px,3vw,36px);display:grid;grid-template-columns:1fr 1fr;gap:16px}
+form.demo .full{grid-column:1/-1}
+form.demo label{display:block;font-weight:800;font-size:.95rem;margin-bottom:6px}
+form.demo input[type=text],form.demo input[type=email],form.demo input[type=tel]{width:100%;min-height:48px;border:2px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:var(--paper);color:var(--ink)}
+form.demo input:focus-visible{outline:3px solid var(--focus);outline-offset:1px;border-color:transparent}
+form.demo fieldset{border:0;margin:0;padding:0}
+form.demo legend{font-weight:800;font-size:.95rem;margin-bottom:8px;padding:0}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.checks label{display:inline-flex !important;align-items:center;gap:8px;margin:0 !important;font-weight:700 !important;padding:8px 14px;border:2px solid var(--line);border-radius:999px;cursor:pointer;min-height:44px}
+.checks input{appearance:none;-webkit-appearance:none;margin:0;width:20px;height:20px;border:2px solid var(--ink-2);border-radius:5px;background:var(--surface);display:grid;place-items:center;flex:0 0 auto}
+.checks input:checked{background:var(--court-2);border-color:var(--court-2)}
+.checks input:checked::after{content:"";width:5px;height:10px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
+.checks input:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.checks label:has(input:checked){border-color:var(--court);background:color-mix(in srgb,var(--mint) 25%,transparent)}
+form.demo .btn{justify-self:start}
+.form-status{font-size:.95rem;color:var(--ink-2)}
+.form-status:not(:empty){padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--tape) 20%,transparent);color:var(--ink)}
+
+footer{padding:36px 0 48px;font-size:.88rem;color:var(--ink-2)}
+footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+/* responsive */
+@media (max-width:980px){
+  .hero .wrap,.why .wrap,.dash-wrap,.contact .wrap{grid-template-columns:1fr}
+  .hero::before{background:radial-gradient(circle at 78% 120%, transparent 0 239px, rgba(141,216,211,.55) 240px 243px, transparent 244px)}
+  .fund{grid-template-columns:1fr 1fr}
+  .fund > :first-child,.fund > :last-child{grid-column:1/-1}
+  .deploy-grid{grid-template-columns:1fr 1fr}
+  .deploy-grid figure:first-child{grid-row:auto;grid-column:1/-1;aspect-ratio:4/3}
+  .spec{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  body{font-size:16px}
+  .hero::before,.contact::before{opacity:.25;background:radial-gradient(circle at 100% 100%, transparent 0 179px, rgba(141,216,211,.55) 180px 183px, transparent 184px)}
+  .pillar-grid,.lane,.modes{grid-template-columns:1fr}
+  .pillar{border-left:0;padding:28px 0;border-top:1px solid var(--line)}
+  .pillar:first-child{border-top:0;padding-top:0}
+  .mode{border-left:0;border-top:2px solid var(--ink)}
+  .mode:first-child{border-top:0}
+  .lane li + li{margin-top:16px}
+  .kpis{grid-template-columns:1fr 1fr 1fr}
+  .panels{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr;gap:0}
+  .steps li{padding:2px 0 18px 42px}
+  .steps li::after{top:26px;left:12px;right:auto;bottom:0;border-top:0;border-left:2px solid var(--line)}
+  form.demo{grid-template-columns:1fr}
+  .gap-list{grid-template-columns:1fr}
+  .gap-list li:nth-child(odd){border-right:0;padding-right:0}
+  .gap-list li:nth-child(even){padding-left:0}
+  .privacy{grid-template-columns:1fr}
+  .ex-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+  .ex{font-size:.88rem;padding:14px 4px 12px}
+  .ex img,.ex svg{width:48px;height:48px}
+  .kpi b{font-size:1.25rem}
+  .dash{padding:12px}
+}
+@media (max-width:420px){
+  .brand small{display:none}
+  .kpi{padding:10px 8px}
+  .kpi small{font-size:11px}
+  .fund{grid-template-columns:1fr}
+}
+.more-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.more-grid li{padding:22px 22px 20px;border-radius:var(--radius-m);background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--tape)}
+.more-grid h3{font-size:1.12rem}
+.more-grid p{margin-top:8px;color:var(--ink-2)}
+.benefits{margin-top:clamp(28px,4vw,44px);padding:22px 24px;border-radius:var(--radius-m);background:color-mix(in srgb,var(--mint) 22%,var(--surface))}
+.benefits ul{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px 20px}
+.benefits li{position:relative;padding-left:18px;font-weight:700}
+.benefits li::before{content:"";position:absolute;left:0;top:.55em;width:9px;height:9px;border-radius:2px;background:var(--tape)}
+@media (max-width:980px){.more-grid{grid-template-columns:repeat(2,1fr)}.benefits ul{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:760px){.more-grid,.benefits ul{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{transition:none !important;animation:none !important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要內容</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Intelligent Playground 智能運動場 首頁">
+      <img src="assets/mascot-icon-128.png" alt="" width="40" height="40">
+      <span>智能運動場<small>Intelligent Playground</small></span>
+    </a>
+    <nav class="nav" aria-label="主要導覽">
+      <a href="#how">點樣用</a>
+      <a href="#exercises">運動項目</a>
+      <a href="#dashboard">教師後台</a>
+      <a href="#funding">資助</a>
+      <a href="#faq">常見問題</a>
+      <a class="btn btn-tape" href="#contact">預約示範</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- HERO -->
+<section class="hero" id="top" aria-labelledby="hero-title">
+  <div class="wrap">
+    <div>
+      <h1 id="hero-title"><span class="line">將運動變成</span><span class="line">有趣的學習體驗</span></h1>
+      <p class="lede">Intelligent Playground 智能運動場是一部放在學校及康樂中心的 AI 運動站。系統利用動作偵測即時追蹤及分析學生的動作，幫助學生每日郁足 <span class="count">60</span> 分鐘中等至高強度體育活動（MVPA60），成績自動記錄到教師後台。</p>
+      <p class="en-sub" lang="en">Turning exercise into a fun learning experience. AI-powered exercise kiosk for schools and leisure centres.</p>
+      <div class="ctas">
+        <a class="btn btn-tape" href="#contact">預約到校示範</a>
+        <a class="btn btn-ghost" href="#funding">了解資助方案</a>
+      </div>
+      <ul class="hero-facts">
+        <li>毋須手機或手環</li>
+        <li>最多 3 人同場比賽</li>
+        <li>12 個運動項目</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- WHY -->
+<section class="sec why" aria-labelledby="why-title">
+  <div class="wrap">
+    <div>
+      <div class="sixty" aria-hidden="true"><b>60</b><span>分鐘</span></div>
+      <h2 id="why-title">每天 60 分鐘，學生做到嗎？</h2>
+      <p class="who">世界衞生組織建議 5–17 歲兒童及青少年每天平均累積最少 60 分鐘中等至劇烈強度體能活動（MVPA60）。</p>
+      <ul class="gap-list">
+        <li>體育課時有限</li>
+        <li>小息、午飯時間多數靜坐</li>
+        <li>老師難以逐一督導</li>
+        <li>活動量欠缺數據記錄</li>
+      </ul>
+      <p class="policy"><strong>體育，正式計分。</strong>教育局優化中學學位分配「校內成績評估」安排，體育比重由 0 增至 2，2026/27 學年小五下學期起實施。</p>
+    </div>
+    <figure>
+      <img src="assets/students-hall-high-knees.jpg" alt="三位學生在禮堂的大屏前做高抬腿，屏幕上方裝有鏡頭" width="1920" height="1440" loading="lazy">
+      <figcaption>運動站裝在禮堂牆上，學生站在大屏前就可以開始。</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- PILLARS -->
+<section class="sec pillars" id="features" aria-labelledby="features-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="features-title">一部 AI 運動站，校園隨時郁</h2>
+      <p>大屏加鏡頭，放在走廊、禮堂或有蓋操場。學生站在鏡頭前就可以開始，成績自動記錄到後台。</p>
+    </div>
+    <div class="pillar-grid">
+      <article class="pillar">
+        <div class="glyph"><img src="assets/icons/icon-jumping-jacks.png" alt=""></div>
+        <h3>好玩、自發</h3>
+        <span class="en" lang="en">Fun &amp; self-started</span>
+        <p>最多 3 人同場競賽，設有排行榜、遊戲化項目和挑戰，小息也能動起來。</p>
+      </article>
+      <article class="pillar">
+        <div class="glyph"><img src="assets/icons/icon-squat.png" alt=""></div>
+        <h3>AI 即時計數</h3>
+        <span class="en" lang="en">AI that counts</span>
+        <p>裝置上的 AI 姿勢偵測即時數算次數，並有卡通示範動畫教正確動作。</p>
+      </article>
+      <article class="pillar">
+        <div class="glyph"><svg viewBox="0 0 34 34" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 29h24"/><path d="M9 24v-6M15 24V10M21 24v-9M27 24V6"/></svg></div>
+        <h3>數據看得見</h3>
+        <span class="en" lang="en">Data teachers can use</span>
+        <p>成績按年級、班別、學號記錄。教師後台可查看參與率、運動時間和使用時段。</p>
+      </article>
+    </div>
+    <div class="privacy" id="privacy">
+      <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true"><path d="M20 4 6 9v10c0 9 6 15 14 17 8-2 14-8 14-17V9L20 4Z"/><path d="m14 20 4.5 4.5L27 16" stroke-linecap="round"/></svg>
+      <div>
+        <h3>AI 在裝置上運算，不上載影片</h3>
+        <p>姿勢及臉部偵測在運動站本機運算，不會上載影片。上載到學校後台的只有成績紀錄及一張頭像縮圖，學校可在管理員設定中開關資料傳送，設定受管理員密碼保護。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MORE FEATURES -->
+<section class="sec more" id="more" aria-labelledby="more-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="more-title">更多功能</h2>
+      <p>由挑戰設計到家長通知，配合學校推行體育活動。</p>
+    </div>
+    <ul class="more-grid">
+      <li><h3>有趣的挑戰</h3><p>按年齡、能力及體能目標自訂挑戰，例如「一分鐘內誰跳得最多」或限時深蹲。完成挑戰可獲得徽章和獎勵。</p></li>
+      <li><h3>社交互動</h3><p>團隊合作挑戰，培養團隊精神、體育精神及溝通能力。學生亦可在社交媒體分享成就。</p></li>
+      <li><h3>即時反饋</h3><p>運動時即時顯示重複次數及持續時間，幫助學生改善動作。</p></li>
+      <li><h3>家長訂閱資料</h3><p>家長或獲授權監護人可訂閱子女的運動進度，以手機短訊接收通知，無須下載第三方軟件。</p></li>
+      <li><h3>定制化支援</h3><p>我們與學校或機構合作，按需要設計課程、挑戰模式及活動內容。</p></li>
+      <li><h3>簡單易用</h3><p>介面簡單直觀，設定快捷，學生和老師只需很少培訓就可以使用。</p></li>
+    </ul>
+    <div class="benefits">
+      <h3>智能運動場的好處</h3>
+      <ul>
+        <li>以科技吸引學生，令運動更有吸引力</li>
+        <li>應對兒童肥胖及久坐的生活方式</li>
+        <li>培養成長心態</li>
+        <li>提升自信心和自尊感</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section class="sec how" id="how" aria-labelledby="how-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="how-title">三步開始</h2>
+      <span class="en" lang="en">Step in, raise a hand, move.</span>
+    </div>
+    <ol class="lane">
+      <li>
+        <div class="shot"><img src="assets/students-raise-hand-to-join.jpg" alt="學生站在大屏前舉起手，準備加入遊戲" loading="lazy" width="1920" height="1440"></div>
+        <div class="num"><b>1</b></div>
+        <h3>站入框內</h3>
+        <p>鏡頭畫面上有站位框，學生走到框內就可以。</p>
+      </li>
+      <li>
+        <div class="shot"><img src="assets/app-raise-hand-to-join.jpg" alt="加入畫面：兩個綠色「已加入」位置，第三個位置等待參加者，上方顯示倒數" loading="lazy" width="1920" height="886"></div>
+        <div class="num"><b>2</b></div>
+        <h3>加入</h3>
+        <p>站在鏡頭前，按提示即可加入，最多 3 人。</p>
+      </li>
+      <li>
+        <div class="shot"><img src="assets/app-competition-timer.jpg" alt="深蹲比賽畫面：鏡頭影像上有站位框，下方是 60 秒倒數和各參加者的計數" loading="lazy" width="1920" height="886"></div>
+        <div class="num"><b>3</b></div>
+        <h3>開始運動</h3>
+        <p>跟著示範做，AI 自動計數；完成後輸入班別學號，成績即時記錄。</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- EXERCISES -->
+<section class="sec" id="exercises" aria-labelledby="ex-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="ex-title">12 個項目，3 種玩法</h2>
+      <p>體適能訓練加遊戲化挑戰。每個項目都有卡通示範動畫，提醒學生正確動作。</p>
+    </div>
+    <div class="ex-legend" aria-hidden="true"><span><i></i>體適能（9 項）</span><span><i class="g"></i>遊戲化（3 項）</span></div>
+    <ul class="ex-grid" aria-label="運動項目">
+      <li class="ex"><img src="assets/icons/icon-squat.png" alt="">深蹲</li>
+      <li class="ex"><img src="assets/icons/icon-push-up.png" alt="">俯臥撐</li>
+      <li class="ex"><img src="assets/icons/icon-sit-up.png" alt="">仰臥起坐</li>
+      <li class="ex"><svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="51" cy="30" r="4.5"/><path d="M46 33 14 38"/><path d="M14 38l-3 4"/><path d="M40 34l1 9h5"/><path d="M10 46h44" opacity=".5"/></svg>平板支撐</li>
+      <li class="ex"><img src="assets/icons/icon-jumping-jacks.png" alt="">開合跳</li>
+      <li class="ex"><img src="assets/icons/icon-high-knees.png" alt="">高抬腿</li>
+      <li class="ex"><img src="assets/icons/icon-glute-bridge.png" alt="">臀橋</li>
+      <li class="ex"><img src="assets/icons/icon-lying-leg-raise.png" alt="">仰臥抬腿</li>
+      <li class="ex"><img src="assets/icons/icon-left-right-jump.png" alt="">左右跳</li>
+      <li class="ex game"><img src="assets/icons/icon-run.png" alt="">百米飛人<span class="tag">遊戲</span></li>
+      <li class="ex game"><svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="44" cy="22" r="4.5"/><path d="M14 32l14-4 12 4"/><path d="M28 28l8-8 8 4"/><path d="M8 42c4-3 8-3 12 0s8 3 12 0 8-3 12 0 8 3 12 0"/><path d="M8 50c4-3 8-3 12 0s8 3 12 0 8-3 12 0 8 3 12 0" opacity=".5"/></svg>游泳健將<span class="tag">遊戲</span></li>
+      <li class="ex game"><svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="32" cy="32" r="20"/><path d="M12 32h40"/><path d="M32 12v40"/><path d="M18 18c6 6 6 22 0 28"/><path d="M46 18c-6 6-6 22 0 28"/></svg>運球高手<span class="tag">Beta</span></li>
+    </ul>
+    <div class="modes">
+      <div class="mode">
+        <h3>單人練習</h3><span class="en" lang="en">Single practice</span>
+        <p>一次一人，按自己步伐練習指定項目。</p>
+      </div>
+      <div class="mode">
+        <h3>多人競賽</h3><span class="en" lang="en">Multiplayer</span>
+        <p>最多 3 人同場比賽，即時比分，完成後有成績動畫。</p>
+      </div>
+      <div class="mode">
+        <h3>隨機練習</h3><span class="en" lang="en">Random practice</span>
+        <p>由系統隨機安排項目，挑戰不同動作。</p>
+      </div>
+    </div>
+    <p class="ex-foot"><strong>運球高手（Beta）</strong>：單人 60 秒運球挑戰，設簡單、中等、困難三個難度。AI 偵測籃球，分開計算左右手運球；困難級要一邊運球，一邊觸碰屏幕上的星星。須使用籃球。</p>
+    <p class="ex-foot">每個項目設有首十名排行榜。項目會持續更新。</p>
+  </div>
+</section>
+
+<!-- DEPLOYMENT -->
+<section class="sec" id="hardware" aria-labelledby="hw-title" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="hw-title">安裝簡單，適合各種場地</h2>
+      <p>可選落地式運動站、壁掛大屏或 iPad 版本。年級及班別可在管理員設定中按學校情況調整，亦可顯示學校標誌及校名。</p>
+    </div>
+    <div class="deploy-grid">
+      <figure><img src="assets/kiosk-floor-standing-gameplay.jpg" alt="落地式直身運動站放在校園有蓋地方，屏幕顯示鏡頭畫面和遊戲" loading="lazy" width="1440" height="1920"><figcaption>落地式運動站</figcaption></figure>
+      <figure><img src="assets/kiosk-wall-mounted-menu.jpg" alt="牆上的大電視顯示藍色運動項目選單，上方裝有鏡頭" loading="lazy" width="1920" height="1143"><figcaption>壁掛大屏</figcaption></figure>
+      <figure><img src="assets/kiosk-joyful-arena-wall.jpg" alt="畫有壁畫的活動室牆上裝有大屏和鏡頭" loading="lazy" width="1920" height="1210"><figcaption>配合校園佈置</figcaption></figure>
+      <figure><img src="assets/kiosk-portrait-screen-closeup.jpg" alt="直身運動站屏幕近照，顯示計時器和參加者位置" loading="lazy" width="1920" height="1440"><figcaption>直身屏幕介面</figcaption></figure>
+      <figure><img src="assets/student-covered-playground-kiosk.jpg" alt="一名學生在有蓋操場上，於可移動支架上的運動站前運動" loading="lazy" width="1440" height="1920" style="object-position:50% 40%"><figcaption>有蓋操場</figcaption></figure>
+    </div>
+    <dl class="spec">
+      <div><dt>運動站</dt><dd>大屏 AI 運動站</dd></div>
+      <div><dt>鏡頭</dt><dd>1080p USB 鏡頭</dd></div>
+      <div><dt>其他版本</dt><dd>支援 iPad</dd></div>
+      <div><dt>場地</dt><dd>走廊、禮堂、有蓋操場</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<section class="sec dash-sec" id="dashboard" aria-labelledby="dash-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="dash-title">教師數據後台</h2>
+      <p>誰在郁、郁幾耐、幾時郁，一目了然。網上後台，電腦和手機都可查看。</p>
+    </div>
+    <div class="dash-wrap">
+      <ul class="dash-points">
+        <li><strong>參與分析</strong><span>各年級、班級及學生的參與情況</span></li>
+        <li><strong>運動時間</strong><span>人均運動時間、每位學生的總運動時間</span></li>
+        <li><strong>使用時段</strong><span>時段及星期分佈，方便安排課堂</span></li>
+        <li><strong>運動項目分析</strong><span>最受歡迎的項目及模式</span></li>
+        <li><strong>排行榜</strong><span>班級排行、最活躍學生</span></li>
+        <li><strong>報告</strong><span>一鍵列印</span></li>
+      </ul>
+      <div>
+        <figure class="browser" role="img" aria-label="教師後台示意圖：顯示參與學生人數、總運動時數、人均運動時間，各年級參與率棒形圖，時段及星期熱力圖，班級排行及最活躍學生。所有數字均為虛構示例。" style="margin:0">
+          <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>學校後台 ／ 數據總覽</span></div>
+          <span class="demo-stamp" aria-hidden="true">示意圖</span>
+          <div class="dash" aria-hidden="true">
+            <div class="dash-top">
+              <h3>數據總覽</h3>
+              <span class="range">2026-09-01 至 2026-10-31</span>
+              <span class="print">列印報告</span>
+            </div>
+            <div class="kpis">
+              <div class="kpi"><small>參與學生人數</small><b>418<em>人</em></b></div>
+              <div class="kpi"><small>期間總運動時數</small><b>203<em>小時</em></b></div>
+              <div class="kpi"><small>人均運動時間</small><b>29<em>分鐘</em></b></div>
+            </div>
+            <div class="panels">
+              <div class="panel">
+                <h4>各年級參與率</h4>
+                <div class="bars">
+                  <div class="bar-row"><span>小一</span><div class="track"><div class="fill" style="width:58%"></div></div><span class="v">58%</span></div>
+                  <div class="bar-row"><span>小二</span><div class="track"><div class="fill" style="width:66%"></div></div><span class="v">66%</span></div>
+                  <div class="bar-row"><span>小三</span><div class="track"><div class="fill" style="width:72%"></div></div><span class="v">72%</span></div>
+                  <div class="bar-row"><span>小四</span><div class="track"><div class="fill" style="width:81%"></div></div><span class="v">81%</span></div>
+                  <div class="bar-row"><span>小五</span><div class="track"><div class="fill" style="width:77%"></div></div><span class="v">77%</span></div>
+                  <div class="bar-row"><span>小六</span><div class="track"><div class="fill" style="width:49%"></div></div><span class="v">49%</span></div>
+                </div>
+              </div>
+              <div class="panel">
+                <h4>使用時段 × 星期</h4>
+                <div class="heat" id="heat"></div>
+                <div class="heat-key"><span>少</span><i style="background:#E4F4F2"></i><i style="background:#A9E0DB"></i><i style="background:#5DB5B4"></i><i style="background:#0D687A"></i><span>多</span></div>
+              </div>
+              <div class="panel">
+                <h4>每位學生總運動時間（人數）</h4>
+                <div class="dist">
+                  <div style="height:34%"></div><div style="height:72%"></div><div style="height:100%"></div><div style="height:63%"></div><div style="height:38%"></div><div style="height:17%"></div>
+                </div>
+                <div class="dist-l"><span>&lt;10</span><span>10–20</span><span>20–30</span><span>30–45</span><span>45–60</span><span>60+</span></div>
+                <div class="dist-l" style="justify-content:center"><span>分鐘</span></div>
+              </div>
+              <div class="panel">
+                <h4>班級排行（人均分鐘）</h4>
+                <ol class="rank">
+                  <li><b>1</b><span>4C</span><span>46</span></li>
+                  <li><b>2</b><span>5A</span><span>41</span></li>
+                  <li><b>3</b><span>3B</span><span>38</span></li>
+                  <li><b>4</b><span>4A</span><span>35</span></li>
+                </ol>
+              </div>
+              <div class="panel" style="grid-column:1/-1">
+                <h4>最活躍學生（按班別學號）</h4>
+                <ol class="rank" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
+                  <li><b>1</b><span>5A 班 12 號</span><span>3 小時 8 分</span></li>
+                  <li><b>2</b><span>4C 班 03 號</span><span>2 小時 51 分</span></li>
+                  <li><b>3</b><span>4C 班 27 號</span><span>2 小時 40 分</span></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </figure>
+        <p class="dash-note">示意圖：介面經簡化，所有數字均為虛構示例，並非真實學校數據。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FUNDING -->
+<section class="sec" id="funding" aria-labelledby="fund-title">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="fund-title">可用資助</h2>
+      <p>多項教育局及優質教育基金資助都可涵蓋 AI 體育設備及軟件。價錢按學校需要報價，我們可以協助準備申請文件。</p>
+    </div>
+    <ul class="fund-list">
+      <li class="fund">
+        <div><h3>MVPA60 一筆過津貼</h3><span class="circ">教育局通函第 73/2024 號</span><span class="deadline">須於 2027-08-31 前用完</span></div>
+        <dl><dt>金額</dt><dd class="amt">$150,000</dd><dd>每校</dd></dl>
+        <dl><dt>適用</dt><dd>公營及直資中小學、特殊學校</dd></dl>
+        <p>津貼用途明列體育相關資訊科技服務、流動應用程式及軟件，以及體育活動套件和輔助工具。運動站屬體育專用設備。</p>
+      </li>
+      <li class="fund">
+        <div><h3>「智」啟學教撥款</h3><span class="circ">教育局通函第 221/2025 號</span></div>
+        <dl><dt>金額</dt><dd class="amt">$500,000</dd><dd>每校，可用至 2028-08-31</dd></dl>
+        <dl><dt>適用</dt><dd>已獲批學校</dd></dl>
+        <p>學校須在至少 3 個科目推行 AI 輔助教學，體育可作其中一科。</p>
+      </li>
+      <li class="fund">
+        <div><h3>QEF 專項撥款</h3><span class="circ">教育局通函第 96/2026 號</span></div>
+        <dl><dt>金額</dt><dd class="amt">$3,000,000</dd><dd>累計上限</dd></dl>
+        <dl><dt>適用</dt><dd>公帑資助學校</dd></dl>
+        <p>第十七期：2026 年 10 月至 2027 年 1 月接受申請。</p>
+      </li>
+    </ul>
+    <div class="fund-notes">
+      <p>幼稚園：可考慮單位資助或 QEF 專項撥款（MVPA60 津貼及「智」啟學教撥款不適用於幼稚園）。</p>
+      <p class="official">以教育局最新通函為準。資助的使用亦須符合 QEF 最新指引及學校採購程序。</p>
+    </div>
+
+    <h3 class="steps-title">由試用到全校使用</h3>
+    <ol class="steps">
+      <li>到校示範及場地評估</li>
+      <li>報價及配合資助申請</li>
+      <li>安裝及設定年級、班別</li>
+      <li>教師簡介及學生試玩</li>
+      <li>定期檢視數據報告</li>
+    </ol>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="sec dash-sec" id="faq" aria-labelledby="faq-title">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="faq-title">常見問題</h2></div>
+    <div class="faq-list">
+      <details>
+        <summary>需要學生帶手機或戴手環嗎？</summary>
+        <div class="a"><p>不需要。學生只要站在鏡頭前舉手，就可以加入。</p></div>
+      </details>
+      <details>
+        <summary>一次可以幾多人玩？</summary>
+        <div class="a"><p>單人練習一次一人；多人競賽最多 3 人同場比賽。</p></div>
+      </details>
+      <details>
+        <summary>會唔會拍片上載？學生私隱點保障？</summary>
+        <div class="a"><p>姿勢和臉部偵測都在裝置上運算，不會上載影片。如學校開啟資料傳送，系統只會上載成績紀錄（項目、次數、時間、年級、班別、學號）及一張頭像縮圖到學校後台。學校可在管理員設定中關閉資料傳送。</p></div>
+      </details>
+      <details>
+        <summary>可以幫學校記錄 MVPA60 嗎？</summary>
+        <div class="a"><p>運動站會記錄每位學生的運動次數和時間，後台可統計人均和每位學生的運動時數，協助學校推動 MVPA60。</p></div>
+      </details>
+      <details>
+        <summary>需要什麼硬件？</summary>
+        <div class="a"><p>標準配置是大屏 AI 運動站配 1080p USB 鏡頭，也可使用 iPad 版本。我們會按場地建議擺放位置。</p></div>
+      </details>
+      <details>
+        <summary>價錢多少？可以用什麼資助？</summary>
+        <div class="a"><p>我們按學校的場地及需要報價。MVPA60 一筆過津貼、「智」啟學教撥款及 QEF 專項撥款都是常用的資助來源，我們可以協助準備申請文件。</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="sec contact" id="contact" aria-labelledby="contact-title">
+  <div class="wrap">
+    <div>
+      <h2 id="contact-title">預約到校示範</h2>
+      <p class="lede">讓學生親身試一次，看看小息可以有多大改變。</p>
+      <ul>
+        <li>到校示範及場地評估</li>
+        <li>按學校需要報價</li>
+        <li>協助資助申請文件</li>
+      </ul>
+      <p class="direct">Ant-App Limited｜陳先生｜電郵 <a href="mailto:anthonychan@ant-app.ai">anthonychan@ant-app.ai</a>｜電話 <a href="tel:+85262247029">6224 7029</a></p>
+      <div class="photo"><img src="assets/student-raise-hand-outdoor.jpg" alt="一名學生背向鏡頭，在校園的運動站前舉起手" loading="lazy" width="1440" height="1920"></div>
+    </div>
+    <form class="demo" id="demoForm" novalidate>
+      <div><label for="f-school">學校名稱</label><input id="f-school" name="school" type="text" autocomplete="organization" required></div>
+      <div><label for="f-name">聯絡人</label><input id="f-name" name="name" type="text" autocomplete="name" required></div>
+      <div class="full"><label for="f-role">職位</label><input id="f-role" name="role" type="text" autocomplete="organization-title" placeholder="例如：體育科主任"></div>
+      <div><label for="f-email">電郵</label><input id="f-email" name="email" type="email" autocomplete="email" required></div>
+      <div><label for="f-tel">電話</label><input id="f-tel" name="tel" type="tel" autocomplete="tel" inputmode="tel"></div>
+      <fieldset class="full">
+        <legend>想了解的資助</legend>
+        <div class="checks">
+          <label><input type="checkbox" name="fund" value="MVPA60">MVPA60 一筆過津貼</label>
+          <label><input type="checkbox" name="fund" value="AI">「智」啟學教撥款</label>
+          <label><input type="checkbox" name="fund" value="QEF">QEF 專項撥款</label>
+        </div>
+      </fieldset>
+      <button class="btn btn-tape full" type="submit">預約到校示範</button>
+      <p class="form-status full" id="formStatus" role="status" aria-live="polite"></p>
+    </form>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© Ant-App Limited · Intelligent Playground 智能運動場</span>
+    <span>Unit 2610, APEC Plaza, 49 Hoi Yuen Road, Kwun Tong, Kowloon, Hong Kong</span>
+    <span><a href="https://www.ant-app.com/privacyPolicy" rel="noopener">私隱政策</a></span>
+    <span>資助資料以教育局最新通函為準。</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var qt = /[?&]theme=(light|dark)/.exec(location.search); if (qt) document.documentElement.setAttribute('data-theme', qt[1]);
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  // illustrative heatmap
+  var days = ['一','二','三','四','五'], slots = ['早會前','小息一','小息二','午飯','放學後'];
+  var data = [[1,3,2,4,1],[1,3,3,4,2],[0,2,3,4,1],[1,4,3,3,2],[1,3,2,4,3]];
+  var cols = ['#E4F4F2','#C7EAE6','#A9E0DB','#5DB5B4','#0D687A'];
+  var h = document.getElementById('heat'), html = '<span></span>';
+  days.forEach(function(d){ html += '<span class="h">' + d + '</span>'; });
+  slots.forEach(function(sl, r){
+    html += '<span class="rl">' + sl + '</span>';
+    days.forEach(function(_, c){ html += '<span class="c" style="background:' + cols[data[c][r]] + '"></span>'; });
+  });
+  h.innerHTML = html;
+
+  // form: not connected to a backend yet
+  var f = document.getElementById('demoForm'), st = document.getElementById('formStatus');
+  f.addEventListener('submit', function(e){
+    e.preventDefault();
+    var bad = Array.prototype.filter.call(f.querySelectorAll('[required]'), function(i){ return !i.value.trim() || (i.type==='email' && !/^\S+@\S+\.\S+$/.test(i.value)); });
+    if (bad.length){ st.textContent = '請填寫學校名稱、聯絡人及有效電郵。'; bad[0].focus(); return; }
+    st.textContent = '多謝！網上表單尚未連接，請把以上資料電郵至 anthonychan@ant-app.ai，我們會盡快聯絡你。';
+  });
+})();
+</script>
+</body>
+</html>
