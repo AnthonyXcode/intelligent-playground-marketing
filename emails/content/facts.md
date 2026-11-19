@@ -91,4 +91,4 @@
 - F-KG-UNIT [KG] 幼稚園教育計劃「單位資助」（教育局通函第 1/2026 號附錄 3）可用於「供學校使用作為教學用途的家具及設備」及「與教學活動有直接關係的其他支出」；屬經常性資助，毋須另行申請，學校自行在預算中編配；須依照《幼稚園採購程序指引》採購。（funding/kindergarten.md §1）
 - F-KG-QEF [KG] QEF 專項撥款新階段（教育局通函第 96/2026 號）：每所幼稚園累計申請額由 $500,000 提高至 $700,000，可用於校本課程及相關物資購置；第十七期申請期為 2026 年 10 月至 2027 年 1 月，第十八期為 2027 年 4 月至 7 月。（funding/kindergarten.md §2）
 - F-KG-PLEDGE [KG] QEF「我的行動承諾」加強版（第二階段）：每所幼稚園可提交一個不超過 $150,000 的申請，範疇包括「促進學生的身心健康」，全年接受申請至 2027/28 學年底。（funding/kindergarten.md §3）
-- F-KG-NOT-ELIGIBLE [KG] （內部用，勿在電郵提及）MVPA60 一筆過津貼及「智」啟學教撥款不適用於幼稚園。（funding/kindergarten.md §二）
+- F-KG-NOT-ELIGIBLE [INTERNAL] （內部用，勿在電郵提及；標籤 INTERNAL 令 pipeline 不會把此行交給 AI）MVPA60 一筆過津貼及「智」啟學教撥款不適用於幼稚園。（funding/kindergarten.md §二）

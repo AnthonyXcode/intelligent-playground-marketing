@@ -28,6 +28,7 @@ export async function runPipeline(ctx, { dryRun = false, checkOnly = false, sche
   if (scheduled && !dryRun && !checkOnly) mode = scheduledMode(ctx);
   const runId = Number(db.prepare("INSERT INTO runs (started_at, mode, status) VALUES (?,?, 'running')").run(ctx.now().toISOString(), mode).lastInsertRowid);
   const result = { code: 0, mode, sent: 0, replies: 0, errors: 0, replyList: [] };
+  let hold = new Set();
   let status = "ok", note = "";
   log.info(`=== run ${runId} start: mode=${mode}${cfg.testRecipient ? `, TEST MODE -> ${cfg.testRecipient}` : ""}`);
   try {
@@ -36,10 +37,10 @@ export async function runPipeline(ctx, { dryRun = false, checkOnly = false, sche
       const me = (await ctx.gmail.profileEmail()).toLowerCase();
       if (me !== cfg.sender.email.toLowerCase()) throw Object.assign(new Error(`Logged in as ${me} but config.sender.email is ${cfg.sender.email}. Run ./emails/scripts/setup.sh and log in with the right account.`), { name: "AuthError" });
       const r = await checkReplies(ctx);
-      result.replies = r.newReplies; result.errors += r.errors; result.replyList = r.replies;
+      result.replies = r.newReplies; result.errors += r.errors; result.replyList = r.replies; hold = r.hold || hold;
     } else log.info("dry-run: reply check skipped, nothing is sent and no state or labels change");
     if (mode === "send" || mode === "dry-run") {
-      const s = await sendDue(ctx, { dryRun: mode === "dry-run", limit });
+      const s = await sendDue(ctx, { dryRun: mode === "dry-run", limit, hold });
       result.sent = s.sent; result.errors += s.errors; result.previews = s.previews;
     }
     if (result.errors) status = "partial";

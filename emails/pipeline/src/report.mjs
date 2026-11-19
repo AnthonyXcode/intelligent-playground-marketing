@@ -6,7 +6,7 @@ import { STATUSES, LEVELS } from "./db.mjs";
 /** Next scheduled run (HK time) from config.schedule. */
 export const STATUS_LABEL = {
   pending: "未寄出", active: "跟進中", replied: "已回覆", unsubscribed: "取消訂閱", bounced: "退回",
-  no_response: "已達上限", skipped_no_email: "沒有電郵", error: "錯誤",
+  no_response: "已達上限", skipped_no_email: "沒有電郵", skipped_flagged: "略過（個人／免費郵箱）", error: "錯誤",
 };
 const lbl = (s) => `${s}（${STATUS_LABEL[s] || s}）`;
 

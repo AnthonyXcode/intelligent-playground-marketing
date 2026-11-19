@@ -45,7 +45,7 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 ok "claude $(claude --version 2>/dev/null | head -1) ($(command -v claude))"
 # Prompt on stdin (--tools takes a list and would swallow a positional prompt). 120 s timeout via perl alarm.
-SMOKE="$(cd /tmp && printf 'Reply with just: ok' | perl -e 'alarm shift; exec @ARGV' 120 claude -p --output-format json --tools "" --strict-mcp-config --no-session-persistence 2>&1 || true)"
+SMOKE="$(cd /tmp && printf 'Reply with just: ok' | perl -e 'alarm shift; exec @ARGV' 120 claude -p --output-format json --tools "" --strict-mcp-config --no-session-persistence --setting-sources= 2>&1 || true)"
 if printf '%s' "$SMOKE" | grep -q '"is_error":false'; then
   ok "claude -p works (logged in)"
 else
@@ -55,7 +55,7 @@ fi
 
 step "5/9 Gmail OAuth client"
 mkdir -p "$EMAILS_DIR/secrets" "$EMAILS_DIR/state/logs"
-chmod 700 "$EMAILS_DIR/secrets"
+chmod 700 "$EMAILS_DIR/secrets" "$EMAILS_DIR/state"
 if [ ! -f "$EMAILS_DIR/secrets/client_secret.json" ]; then
   cat <<MSG
 

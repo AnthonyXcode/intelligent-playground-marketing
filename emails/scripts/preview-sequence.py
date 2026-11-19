@@ -34,7 +34,7 @@ first_subject = first.splitlines()[0].replace("主旨：", "").strip()
 emails = [{"n": 1, "topic": "首次介紹", "subject": first_subject, "body": "\n".join(first.splitlines()[2:]).strip()}]
 
 def ask(prompt):
-    r = subprocess.run(["claude", "-p", "--output-format", "json", "--tools", "", "--no-session-persistence"],
+    r = subprocess.run(["claude", "-p", "--output-format", "json", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--setting-sources="],
                        input=prompt, capture_output=True, text=True, timeout=180)
     res = json.loads(r.stdout)["result"].strip()
     res = re.sub(r"^```(?:json)?\s*|\s*```$", "", res)

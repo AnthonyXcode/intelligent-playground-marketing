@@ -5,7 +5,9 @@ import { DatabaseSync } from "node:sqlite";
 import { parseCsv } from "./csv.mjs";
 
 export const LEVELS = ["KG", "PRI", "SEC", "SPE"];
-export const STATUSES = ["pending", "active", "replied", "unsubscribed", "bounced", "no_response", "skipped_no_email", "error"];
+export const STATUSES = ["pending", "active", "replied", "unsubscribed", "bounced", "no_response", "skipped_no_email", "skipped_flagged", "error"];
+/** Default `notes` flags for contacts that may be personal mailboxes (PDPO): skipped unless config.includeFlaggedContacts. */
+export const FLAGGED_NOTES_RE = /免費郵箱|可能為個人電郵|校長郵箱/;
 const PERMANENT = new Set(["unsubscribed", "bounced"]);
 
 const SCHEMA = `
@@ -82,11 +84,14 @@ export function normEmail(raw) {
 
 /**
  * Import schools.csv. Upserts school info. Never resurrects unsubscribed/bounced schools
- * (by school status or by suppressed email). Returns counts.
+ * (by school status or by suppressed email). Rows whose notes flag a free-mail / personal /
+ * principal mailbox become skipped_flagged unless includeFlagged. A repeated email address
+ * is kept only on its first row. Returns counts.
  */
-export function importSchools(db, csvFile, log, nowIso = new Date().toISOString()) {
+export function importSchools(db, csvFile, log, nowIso = new Date().toISOString(), { includeFlagged = false, flaggedRe = FLAGGED_NOTES_RE } = {}) {
   const rows = parseCsv(fs.readFileSync(csvFile, "utf8"));
-  const counts = { rows: rows.length, inserted: 0, updated: 0, invalid: 0, noEmail: 0, suppressed: 0 };
+  const counts = { rows: rows.length, inserted: 0, updated: 0, invalid: 0, noEmail: 0, suppressed: 0, flagged: 0, duplicateEmail: 0 };
+  const emailOwner = new Map();
   const getState = db.prepare("SELECT * FROM school_state WHERE school_id = ?");
   const getSchool = db.prepare("SELECT id FROM schools WHERE id = ?");
   const getSup = db.prepare("SELECT * FROM suppressions WHERE email = ?");
@@ -108,13 +113,19 @@ export function importSchools(db, csvFile, log, nowIso = new Date().toISOString(
         continue;
       }
       seen.add(id);
-      const email = normEmail(r.email);
+      const rawEmail = normEmail(r.email);
+      let email = rawEmail;
+      if (email && emailOwner.has(email)) {
+        counts.duplicateEmail++;
+        log?.warn(`import: ${id} has the same email as ${emailOwner.get(email)} (${email}); only the first row is emailed`);
+        email = "";
+      } else if (email) emailOwner.set(email, id);
       const existed = !!getSchool.get(id);
       upsert.run(id, level, r.name_zh || "", r.name_en || "", r.district || "", r.address || "", email,
         r.website || "", r.phone || "", r.principal || "", r.source || "", r.notes || "", nowIso);
       existed ? counts.updated++ : counts.inserted++;
       const st = getState.get(id);
-      const sup = email ? getSup.get(email) : null;
+      const sup = rawEmail ? getSup.get(rawEmail) : null;
       if (sup) {
         counts.suppressed++;
         const status = sup.reason === "bounce" ? "bounced" : "unsubscribed";
@@ -123,13 +134,21 @@ export function importSchools(db, csvFile, log, nowIso = new Date().toISOString(
         continue;
       }
       if (!email) counts.noEmail++;
+      const flagged = !!email && !includeFlagged && flaggedRe.test(r.notes || "");
+      if (flagged) {
+        counts.flagged++;
+        const why = `flagged contact (${(r.notes || "").match(flaggedRe)[0]}); set includeFlaggedContacts to include`;
+        if (!st) insState.run(id, "skipped_flagged", why, nowIso);
+        else if (["pending", "active", "skipped_no_email"].includes(st.status)) setStatus.run("skipped_flagged", why, nowIso, id);
+        continue;
+      }
       if (!st) {
         insState.run(id, email ? "pending" : "skipped_no_email", email ? null : "no email", nowIso);
       } else if (PERMANENT.has(st.status)) {
         // never resurrect
       } else if (!email && st.status === "pending") {
         setStatus.run("skipped_no_email", "no email", nowIso, id);
-      } else if (email && st.status === "skipped_no_email") {
+      } else if (email && (st.status === "skipped_no_email" || st.status === "skipped_flagged")) {
         setStatus.run(st.emails_sent > 0 ? "active" : "pending", null, nowIso, id);
       }
     }

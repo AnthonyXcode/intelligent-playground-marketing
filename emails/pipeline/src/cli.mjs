@@ -135,8 +135,8 @@ async function main() {
     case "import": {
       const db = openDb(paths.db);
       if (!fs.existsSync(paths.schoolsCsv)) { log.warn(`${paths.schoolsCsv} not found; DB created, nothing imported`); return cmd === "init" ? 0 : 1; }
-      const c = importSchools(db, paths.schoolsCsv, log);
-      log.info(`import: ${c.rows} rows, ${c.inserted} new, ${c.updated} updated, ${c.noEmail} without email, ${c.suppressed} suppressed, ${c.invalid} invalid`);
+      const c = importSchools(db, paths.schoolsCsv, log, undefined, { includeFlagged: cfg.includeFlaggedContacts === true });
+      log.info(`import: ${c.rows} rows, ${c.inserted} new, ${c.updated} updated, ${c.noEmail} without email, ${c.flagged} flagged contacts skipped${cfg.includeFlaggedContacts === true ? "" : " (includeFlaggedContacts=false)"}, ${c.duplicateEmail} duplicate emails, ${c.suppressed} suppressed, ${c.invalid} invalid`);
       return 0;
     }
     case "status": {

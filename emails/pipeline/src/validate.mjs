@@ -3,7 +3,7 @@ const SIGNATURE_MARKERS = ["NOTICE", "Anthony Chan", "anthonychan@", "General Ma
 
 const charLen = (s) => [...s.replace(/\s/g, "")].length;
 
-export function validateEmail({ subject, body, full, isFollowup, to }, cfg) {
+export function validateEmail({ subject, body, full, isFollowup, to, level }, cfg) {
   const errs = [];
   const L = cfg.limits;
   if (!subject || !subject.trim()) errs.push("empty subject");
@@ -23,6 +23,9 @@ export function validateEmail({ subject, body, full, isFollowup, to }, cfg) {
   }
   for (const t of cfg.bannedClaims || []) {
     if (`${subject}\n${body}`.includes(t)) errs.push(`contains unverified claim: ${t}`);
+  }
+  for (const t of (level && cfg.bannedTermsByLevel?.[level]) || []) {
+    if (`${subject}\n${body}`.toLowerCase().includes(t.toLowerCase())) errs.push(`contains term not allowed for ${level}: ${t}`);
   }
   const len = charLen(body || "");
   if (!body || len < 20) errs.push("body too short");

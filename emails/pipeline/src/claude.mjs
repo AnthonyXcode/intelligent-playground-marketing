@@ -1,13 +1,15 @@
 // Claude CLI wrapper: pure text generation, no tools, JSON output.
 // Flags verified with `claude --help` (Claude Code 2.1.x):
-//   -p --output-format json --tools "" --strict-mcp-config --no-session-persistence
+//   -p --output-format json --tools "" --strict-mcp-config --no-session-persistence --setting-sources=
+// --setting-sources= (empty) skips user/project settings, hooks and CLAUDE.md, so the
+// pipeline Mac's own Claude setup cannot change the prompt or output.
 // The prompt goes in on stdin (no argv length limits, no shell). Output is the JSON
 // envelope; its `.result` string holds the model text, which must itself be JSON.
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 
 export function claudeArgs(cfg) {
-  const args = ["-p", "--output-format", "json", "--tools", "", "--strict-mcp-config", "--no-session-persistence"];
+  const args = ["-p", "--output-format", "json", "--tools", "", "--strict-mcp-config", "--no-session-persistence", "--setting-sources="];
   if (cfg.claude?.model) args.push("--model", cfg.claude.model);
   return args;
 }

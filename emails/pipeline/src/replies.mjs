@@ -31,15 +31,29 @@ export async function classify(ctx, m, originalSubject) {
   return ctx.claude(prompt, validateClassification);
 }
 
+const isInbound = (m, me) => !m.labelIds.includes("SENT") && addrOf(m.from) !== me;
+const UNCLASSIFIED = "reply not classified";
+
+/** True if the thread has an inbound message we have not classified yet (checked right before a follow-up). */
+export async function hasUnseenInbound(ctx, threadId) {
+  const me = ctx.cfg.sender.email.toLowerCase();
+  const seen = ctx.db.prepare("SELECT 1 FROM replies WHERE gmail_id = ? UNION SELECT 1 FROM seen_messages WHERE gmail_id = ?");
+  return (await ctx.gmail.getThread(threadId)).some((m) => isInbound(m, me) && !seen.get(m.id, m.id));
+}
+
+/**
+ * Returns stats incl. `hold`: school ids that must not be emailed this run because their
+ * replies could not be fetched or classified (fail safe: hold, never send).
+ */
 export async function checkReplies(ctx) {
   const { db, gmail, cfg, log } = ctx;
-  const stats = { checked: 0, newReplies: 0, errors: 0, replies: [] };
+  const stats = { checked: 0, newReplies: 0, errors: 0, replies: [], hold: new Set() };
   if (!gmail) { log.info("reply check skipped (no Gmail client)"); return stats; }
   const me = cfg.sender.email.toLowerCase();
   const nowIso = ctx.now().toISOString();
 
   const tracked = db.prepare(`SELECT s.*, st.status, st.emails_sent FROM schools s JOIN school_state st ON st.school_id = s.id
-    WHERE st.emails_sent > 0 AND st.status IN ('active','no_response','error')`).all();
+    WHERE st.emails_sent > 0 AND st.status IN ('active','no_response','error','skipped_flagged')`).all();
   const byId = new Map(tracked.map((s) => [s.id, s]));
   const firstSent = new Map(db.prepare("SELECT school_id, MIN(sent_at) t FROM messages WHERE dry_run = 0 GROUP BY school_id").all().map((r) => [r.school_id, Date.parse(r.t)]));
   const subjectOf = new Map(db.prepare("SELECT school_id, subject FROM messages WHERE dry_run = 0 AND n = 1 ORDER BY id").all().map((r) => [r.school_id, r.subject]));
@@ -50,7 +64,7 @@ export async function checkReplies(ctx) {
   const seenStmt = db.prepare("SELECT 1 FROM replies WHERE gmail_id = ? UNION SELECT 1 FROM seen_messages WHERE gmail_id = ?");
   const markSeen = db.prepare("INSERT OR IGNORE INTO seen_messages (gmail_id, note, seen_at) VALUES (?,?,?)");
   const seen = (id) => !!seenStmt.get(id, id);
-  const inbound = (m) => !m.labelIds.includes("SENT") && addrOf(m.from) !== me;
+  const inbound = (m) => isInbound(m, me);
   const candidates = new Map(); // gmail id -> { m, schoolId }
 
   // 1) our threads
@@ -62,7 +76,7 @@ export async function checkReplies(ctx) {
       }
     } catch (e) {
       if (e.name === "AuthError") throw e;
-      stats.errors++; log.error(`thread ${tid} (${sid}): ${e.message}`);
+      stats.errors++; stats.hold.add(sid); log.error(`thread ${tid} (${sid}): ${e.message}; no email to this school this run`);
     }
   }
 
@@ -80,11 +94,12 @@ export async function checkReplies(ctx) {
   }
   const domains = [...domainSchool.keys()];
   const days = cfg.replySearchDays || 30;
-  const lookup = async (q, resolveSchool) => {
+  const lookup = async (q, resolveSchool, scope = []) => {
     let list = [];
     try { list = await gmail.search(q, 500); } catch (e) {
       if (e.name === "AuthError") throw e;
-      stats.errors++; log.error(`search failed (${q.slice(0, 80)}…): ${e.message}`); return;
+      for (const sid of scope) stats.hold.add(sid);
+      stats.errors++; log.error(`search failed (${q.slice(0, 80)}…): ${e.message}; ${scope.length} schools held this run`); return;
     }
     for (const { id } of list) {
       if (candidates.has(id) || seen(id)) continue;
@@ -106,7 +121,13 @@ export async function checkReplies(ctx) {
     await lookup(`from:(${chunk.map((d) => "@" + d).join(" OR ")}) newer_than:${days}d`, (m) => {
       const a = addrOf(m.from);
       return emailSchool.get(a) || domainSchool.get(domainOf(a));
-    });
+    }, chunk.map((d) => domainSchool.get(d)));
+  }
+  // 2b) exact school address for schools on generic or shared domains (not covered above)
+  const addrs = tracked.filter((s) => s.email && !domainSchool.has(domainOf(s.email))).map((s) => s.email);
+  for (let i = 0; i < addrs.length; i += 15) {
+    const chunk = addrs.slice(i, i + 15);
+    await lookup(`from:(${chunk.join(" OR ")}) newer_than:${days}d`, (m) => emailSchool.get(addrOf(m.from)), chunk.map((a) => emailSchool.get(a)));
   }
   // 3) bounces outside our threads
   if (tracked.length) {
@@ -126,14 +147,23 @@ export async function checkReplies(ctx) {
     if (m.date && firstSent.has(schoolId) && m.date < firstSent.get(schoolId)) { markSeen.run(m.id, "before first email", nowIso); continue; }
     let c;
     try { c = await classify(ctx, m, subjectOf.get(schoolId)); } catch (e) {
-      stats.errors++; log.error(`classify ${m.id} (${schoolId}) failed, will retry next run: ${e.message}`); continue;
+      // Fail safe: an unclassified reply may be a human reply or an unsubscribe, so stop
+      // emailing this school (status error) until it is classified on a later run.
+      stats.errors++; stats.hold.add(schoolId);
+      const st = db.prepare("SELECT status FROM school_state WHERE school_id = ?").get(schoolId)?.status;
+      if (st === "active" || st === "pending") setSchoolStatus(db, schoolId, "error", `${UNCLASSIFIED} (gmail ${m.id}): ${e.message}`.slice(0, 500), nowIso);
+      log.error(`classify ${m.id} (${schoolId}) failed; school held (status error), will retry next run: ${e.message}`); continue;
     }
     insReply.run(schoolId, m.id, m.threadId, m.from, new Date(m.date || Date.now()).toISOString(), c.category, c.summary, nowIso);
     stats.newReplies++;
     stats.replies.push({ schoolId, name: school.name_zh || school.name_en, ...c });
     log.info(`reply ${schoolId} ${school.name_zh || ""}: ${c.category} — ${c.summary}`);
-    const cur = db.prepare("SELECT status FROM school_state WHERE school_id = ?").get(schoolId)?.status;
+    const curRow = db.prepare("SELECT status, stop_reason FROM school_state WHERE school_id = ?").get(schoolId);
+    const cur = curRow?.status;
     if (["unsubscribed", "bounced"].includes(cur)) continue;
+    if (c.category === "auto_reply" && cur === "error" && (curRow.stop_reason || "").startsWith(UNCLASSIFIED)) {
+      setSchoolStatus(db, schoolId, "active", null, nowIso); // held only because of this message
+    }
     try {
       if (c.category === "unsubscribe") {
         setSchoolStatus(db, schoolId, "unsubscribed", c.summary || "unsubscribe", nowIso);

@@ -125,6 +125,12 @@ npm 一律使用公開 registry（`emails/pipeline/.npmrc`：`registry=https://r
 - **取消訂閱及退回的學校永遠不會重新啟動。** 已回覆的學校預設不會重新啟動，除非加上 `--include-replied`。
 - 同一個 campaign 名稱重複執行不會重覆重設。
 
+### 個人／免費郵箱（預設不寄）
+
+`schools.csv` 的 `notes` 註明「免費郵箱」「可能為個人電郵」或「校長郵箱」的學校（約 85 間）可能是個人郵箱（《個人資料（私隱）條例》），
+預設**不會**寄出，狀態為 `skipped_flagged`。如確認要寄，把 `config.json` 的 `includeFlaggedContacts` 改為 `true`，再執行
+`cd emails/pipeline && node src/cli.mjs import`。同一電郵出現在多行時，只寄給第一行的學校。
+
 ### 更新學校名單
 
 更新 `emails/data/schools.csv` 後執行 `./emails/scripts/setup.sh`（或 `cd emails/pipeline && node src/cli.mjs import`）。

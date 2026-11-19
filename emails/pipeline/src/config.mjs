@@ -21,6 +21,8 @@ export const DEFAULTS = {
   limits: { subjectMaxChars: 80, firstBodyMaxChars: 2500, followupBodyMaxChars: 600, followupMaxBullets: 4 },
   bannedTerms: ["Google", "ML Kit", "MediaPipe", "RK3588", "Android", "Flutter", "Strapi"],
   bannedClaims: [],
+  bannedTermsByLevel: { KG: ["MVPA60", "智」啟學教", "智啟學教", "升中", "全方位學習"] },
+  includeFlaggedContacts: false,
   campaigns: {},
 };
 

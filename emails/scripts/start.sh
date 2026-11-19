@@ -30,7 +30,12 @@ mv "$TMP" "$PLIST"
 chmod 644 "$PLIST"
 
 launchctl bootout "gui/$UID/$LABEL" 2>/dev/null || true
-launchctl bootstrap "gui/$UID" "$PLIST"
+# bootout finishes asynchronously; bootstrap can fail with "5: Input/output error" right after it.
+for i in 1 2 3 4 5; do
+  launchctl bootstrap "gui/$UID" "$PLIST" 2>/dev/null && break
+  [ "$i" = 5 ] && { launchctl bootstrap "gui/$UID" "$PLIST"; exit 1; }
+  sleep 1
+done
 launchctl enable "gui/$UID/$LABEL"
 
 echo "已啟動排程：$LABEL"

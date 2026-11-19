@@ -5,6 +5,8 @@
   "sender": { "email": "anthonychan@antapp.ai", "name": "Anthony Chan" },
   "testRecipient": "",
   "testMaxPerRun": 3,
+  "_includeFlaggedContacts": "false (default): rows whose notes say 免費郵箱 / 可能為個人電郵 / 校長郵箱 are not emailed (status skipped_flagged; PDPO: may be personal mailboxes). true includes them; re-run import after changing.",
+  "includeFlaggedContacts": false,
   "schedule": { "sendDays": ["Tue", "Fri"], "sendTime": "10:00", "checkTime": "18:00", "sendWindowEndHour": 20 },
   "maxPerRun": 150,
   "maxPerDay": 400,
@@ -24,5 +26,6 @@
   "_campaigns": "Optional per-campaign content for ./emails/scripts/run.sh --reactivate --campaign <name>: { \"<name>\": { \"templatesDir\": \"campaigns/<name>/templates\", \"topics\": \"campaigns/<name>/topics.json\" } } (paths under emails/content/; omitted = default templates/topics).",
   "campaigns": {},
   "bannedTerms": ["Google", "ML Kit", "MediaPipe", "RK3588", "Android", "Flutter", "Strapi", "Robocoach"],
+  "bannedTermsByLevel": { "KG": ["MVPA60", "智」啟學教", "智啟學教", "升中", "全方位學習"] },
   "bannedClaims": ["徽章", "獎勵", "社交媒體", "團隊合作挑戰", "團隊挑戰", "家長短訊", "短訊通知", "影像永不離開", "完全不收集相片", "免費"]
 }

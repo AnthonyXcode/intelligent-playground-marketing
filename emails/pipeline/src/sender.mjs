@@ -8,6 +8,7 @@ import { buildMime, makeMessageId, toBase64Url } from "./mime.mjs";
 import { validateEmail } from "./validate.mjs";
 import { dayDiff, localDate, addDaysDate } from "./time.mjs";
 import { loadConfig } from "./config.mjs";
+import { hasUnseenInbound } from "./replies.mjs";
 
 const SENDABLE = "('pending','active')";
 
@@ -94,7 +95,7 @@ export async function compose(ctx, r) {
   }
   const full = `${body}\n\n${content.signature}`;
   const to = cfg.testRecipient || r.email;
-  const errs = validateEmail({ subject, body, full, isFollowup: n > 1, to }, cfg);
+  const errs = validateEmail({ subject, body, full, isFollowup: n > 1, to, level: r.level }, cfg);
   if (errs.length) { const e = new Error(`validation failed: ${errs.join("; ")}`); e.validation = errs; throw e; }
   const domain = cfg.sender.email.split("@")[1];
   const messageId = makeMessageId(domain);
@@ -127,18 +128,21 @@ export function sentToday(ctx) {
 
 function stillEnabled(ctx) {
   if (!ctx.paths?.config || !fs.existsSync(ctx.paths.config)) return ctx.cfg.enabled !== false;
-  try { return loadConfig(ctx.paths.config).enabled !== false; } catch { return true; }
+  try { return loadConfig(ctx.paths.config).enabled !== false; } catch { return false; } // unreadable config (e.g. mid-edit): stop, fail safe
 }
 
 /** Send all due emails within limits. dryRun: write state/outbox only, no Gmail, no state change. */
-export async function sendDue(ctx, { dryRun = false, limit } = {}) {
+export async function sendDue(ctx, { dryRun = false, limit, hold = new Set() } = {}) {
   const { db, cfg, log } = ctx;
   const stats = { sent: 0, errors: 0, skipped: 0, previews: [] };
   let budget = Math.min(cfg.maxPerRun, dryRun ? Infinity : Math.max(0, cfg.maxPerDay - sentToday(ctx)));
   if (cfg.testRecipient) budget = Math.min(budget, cfg.testMaxPerRun);
   if (limit) budget = Math.min(budget, limit);
   const { followups, firsts } = selectDue(ctx);
-  const queue = [...followups, ...firsts];
+  const queue = [...followups, ...firsts].filter((r) => {
+    if (hold.has(r.id)) { log.warn(`${r.id}: held this run (reply check incomplete for this school)`); return false; }
+    return true;
+  });
   log.info(`due: ${followups.length} follow-ups, ${firsts.length} first emails; budget this run: ${budget}${dryRun ? " (dry-run)" : ""}${cfg.testRecipient ? ` (TEST MODE -> ${cfg.testRecipient})` : ""}`);
   for (const r of queue) {
     if (stats.sent >= budget) break;
@@ -169,6 +173,16 @@ export async function sendDue(ctx, { dryRun = false, limit } = {}) {
       continue;
     }
     if (stats.sent > 0 && ctx.delay) await ctx.delay();
+    if (!stillEnabled(ctx)) { log.warn("config.enabled=false: stopping sends (kill switch)"); break; } // re-check after the delay
+    if (mail.threadId) {
+      // A reply may have arrived since the reply check (runs can take hours): never follow up over it.
+      try {
+        if (await hasUnseenInbound(ctx, mail.threadId)) { log.info(`${r.id}: new inbound message in thread, follow-up skipped until it is classified`); stats.skipped++; continue; }
+      } catch (e) {
+        if (e.name === "AuthError") throw e;
+        log.warn(`${r.id}: could not re-check thread (${e.message}); follow-up skipped this run`); stats.skipped++; continue;
+      }
+    }
     try {
       const res = await ctx.gmail.send(toBase64Url(mail.mime), mail.threadId || undefined);
       let rfcId = mail.messageId;

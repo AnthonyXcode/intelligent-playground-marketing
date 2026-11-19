@@ -31,6 +31,7 @@ test("claude args: print mode, JSON output, no tools", () => {
   const a = claudeArgs(DEFAULTS);
   assert.deepEqual(a.slice(0, 5), ["-p", "--output-format", "json", "--tools", ""]);
   assert.ok(a.includes("--no-session-persistence") && a.includes("--strict-mcp-config"));
+  assert.ok(a.includes("--setting-sources="), "no user/project settings, hooks or CLAUDE.md");
 });
 
 function fakeBin(script) {
