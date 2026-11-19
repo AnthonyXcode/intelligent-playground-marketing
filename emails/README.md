@@ -159,7 +159,7 @@ npm 一律使用公開 registry（`emails/pipeline/.npmrc`：`registry=https://r
 
 ## 六、寄送規則及安全
 
-- 每間學校最多 10 封；兩封之間最少 `minDaysBetween`（3）日；每次最多 `maxPerRun`（150）封、每日最多 `maxPerDay`（400）封；每封之間隨機等候 20–60 秒。
+- 每間學校最多 10 封；兩封之間最少 `minDaysBetween`（3）日；每次最多 `maxPerRun`（40）封、每日最多 `maxPerDay`（50）封（新網域先慢慢增加，約 2 星期後無退回可逐步調高）；每封之間隨機等候 20–60 秒。
 - 每次先寄到期的跟進電郵，餘額才寄新學校的首次電郵（次序：小學、中學、特殊學校、幼稚園，再按地區）。
 - 首次電郵用 `content/templates/first-<級別>.md`；跟進電郵由 Claude 按 `content/topics.json` 的下一個未用主題撰寫（只用 `content/facts.md` 的事實），第 10 封（即第 9 封跟進）固定用 `final: true` 的收結主題（內容不會說是最後一封，方便日後再推廣）。
 - 簽名、公司地址、取消訂閱字句及 NOTICE 由程式從 `content/signature.md` 加上，AI 不會寫。
