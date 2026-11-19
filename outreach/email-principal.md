@@ -28,7 +28,7 @@
 陳先生
 Intelligent Playground 智能運動場
 Ant-App Limited
-電郵：anthonychan@ant-app.ai
+電郵：anthonychan@antapp.ai
 電話：6224 7029
 
 （資助資料以教育局最新通函為準。）

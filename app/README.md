@@ -22,7 +22,7 @@ npm run test:mailto
 - 內容資料（運動項目、FAQ、功能、資助）：`src/content.ts`
 - 各區塊：`src/components/`
 - 圖片：`public/assets/`（網址維持 `assets/...`）；Vite 產生的檔案放在 `dist/static/`
-- 「預約到校示範」表單會開啟使用者的電郵程式（mailto: anthonychan@ant-app.ai），沒有後端。
+- 「預約到校示範」表單會開啟使用者的電郵程式（mailto: anthonychan@antapp.ai），沒有後端。
 - 頁尾「私隱政策」連結指向 https://www.ant-app.com/privacyPolicy
 
 ## 部署

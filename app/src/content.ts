@@ -1,4 +1,4 @@
-export const CONTACT_EMAIL = 'anthonychan@ant-app.ai'
+export const CONTACT_EMAIL = 'anthonychan@antapp.ai'
 
 export type ExerciseSvg = 'plank' | 'swim' | 'dribble'
 export interface Exercise {

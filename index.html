@@ -755,7 +755,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
         <li>按學校需要報價</li>
         <li>協助資助申請文件</li>
       </ul>
-      <p class="direct">Ant-App Limited｜陳先生｜電郵 <a href="mailto:anthonychan@ant-app.ai">anthonychan@ant-app.ai</a>｜電話 <a href="tel:+85262247029">6224 7029</a></p>
+      <p class="direct">Ant-App Limited｜陳先生｜電郵 <a href="mailto:anthonychan@antapp.ai">anthonychan@antapp.ai</a>｜電話 <a href="tel:+85262247029">6224 7029</a></p>
       <div class="photo"><img src="assets/student-raise-hand-outdoor.jpg" alt="一名學生背向鏡頭，在校園的運動站前舉起手" loading="lazy" width="1440" height="1920"></div>
     </div>
     <form class="demo" id="demoForm" novalidate>
@@ -810,7 +810,7 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
     e.preventDefault();
     var bad = Array.prototype.filter.call(f.querySelectorAll('[required]'), function(i){ return !i.value.trim() || (i.type==='email' && !/^\S+@\S+\.\S+$/.test(i.value)); });
     if (bad.length){ st.textContent = '請填寫學校名稱、聯絡人及有效電郵。'; bad[0].focus(); return; }
-    st.textContent = '多謝！網上表單尚未連接，請把以上資料電郵至 anthonychan@ant-app.ai，我們會盡快聯絡你。';
+    st.textContent = '多謝！網上表單尚未連接，請把以上資料電郵至 anthonychan@antapp.ai，我們會盡快聯絡你。';
   });
 })();
 </script>
