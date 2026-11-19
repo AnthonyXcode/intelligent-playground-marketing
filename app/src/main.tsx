@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot, hydrateRoot } from 'react-dom/client'
 import App from './App'
+import { initTracking } from './track'
 import './styles.css'
 
 const root = document.getElementById('root')!
@@ -13,3 +14,5 @@ const app = (
 // Production HTML is prerendered (scripts/prerender.mjs); dev serves an empty root.
 if (root.firstElementChild) hydrateRoot(root, app)
 else createRoot(root).render(app)
+
+initTracking()

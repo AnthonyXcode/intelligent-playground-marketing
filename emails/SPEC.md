@@ -41,7 +41,7 @@ emails/
     prompts/followup.md   prompt template for follow-up generation
     prompts/classify.md   prompt template for reply classification
   pipeline/               Node code (ESM JavaScript, no TypeScript build step)
-  secrets/                gitignored: client_secret.json, token.json
+  secrets/                gitignored: client_secret.json, token.json, tracking.json
   state/                  gitignored: outreach.db (SQLite), logs/, report.html, run.lock
 ```
 
@@ -84,6 +84,13 @@ UTF-8 with header. Columns:
 - **Modes**: `--dry-run` (no Gmail sends or label changes; write the would-be emails to `state/outbox/`), `config.testRecipient` (if set, every email goes to that address instead of the school, and the subject is prefixed with 【測試】). `config.enabled=false` makes `run.sh` exit early (kill switch).
 - **Claude CLI**: call `claude -p` non-interactively with JSON output and **no tools** (pure text generation). Detect the right flags from `claude --help` on this machine. Time out after 120s, retry once, then mark `error` for that school and continue. Never let Claude send email or run commands; the Node code does all I/O.
 - **Errors**: one school's failure must not stop the run. Gmail auth failure stops the run with a clear log message. Respect Gmail API rate limits (exponential backoff on 429/5xx).
+
+## Link-visit tracking
+
+- Each school gets a random 10-character code (`link_tokens` table, never changes). Before sending, every link to `config.tracking.siteUrl` in the email gets `?r=<code>` (HTML shows the clean URL as link text). The stored `body_text` keeps the plain link.
+- The site (`app/src/track.ts`) stores the code in sessionStorage, removes it from the address bar and, after the page has been visible for 3 s, POSTs `{r, e:"visit"}` to `/api/visit`; the demo form also sends `e:"contact"` and adds 參考編號 to the mailto body.
+- `app/api/visit.js` drops bot/scanner user agents and stores code, event, server time and device class (no IP) in the Upstash Redis stream `ip:visits`. `app/api/visits.js` returns entries after a cursor; needs `Authorization: Bearer $TRACKING_READ_KEY`.
+- The pipeline pulls visits after the reply check (`meta.visits_cursor`), stores them in `visits`, and does not count unknown codes or visits within `tracking.ignoreSecondsAfterSend` of a send to that school. Failures only log a warning.
 
 ## Status tracking
 

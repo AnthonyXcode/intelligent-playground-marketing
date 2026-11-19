@@ -90,7 +90,15 @@ step "8/9 State DB + import schools"
 cli init
 ok "DB at emails/state/outreach.db"
 
-step "9/9 Dry-run (3 schools, nothing is sent)"
+step "9/9 Link-visit tracking key"
+if [ -f "$EMAILS_DIR/secrets/tracking.json" ]; then
+  chmod 600 "$EMAILS_DIR/secrets/tracking.json"
+  if cli visits >/dev/null 2>&1; then ok "tracking key works (link visits can be read)"; else warn "tracking key found but /api/visits did not answer; see emails/state/logs/"; fi
+else
+  warn "emails/secrets/tracking.json not found: link visits will not be tracked. Copy it from the Mac where the key was created (see README「網站瀏覽追蹤」)."
+fi
+
+step "Dry-run (3 schools, nothing is sent)"
 "$SCRIPTS/run.sh" --dry-run --limit 3 || warn "dry-run reported errors; see emails/state/logs/"
 ok "previews in emails/state/outbox/ (open the .html files to check)"
 

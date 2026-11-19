@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { CONTACT_EMAIL, fundOptions } from '../content'
 import { buildMailto, invalidFields } from '../mailto'
+import { refCode, trackEvent } from '../track'
 
 const SENT_MSG = `已開啟你的電郵程式，請按「傳送」。如沒有自動開啟，請直接電郵至 ${CONTACT_EMAIL}。`
 
@@ -19,6 +20,7 @@ export default function Contact() {
       email: get('email'),
       tel: get('tel'),
       funds: fd.getAll('fund').map(String),
+      ref: refCode(),
     }
     const bad = invalidFields(req)
     if (bad.length) {
@@ -28,6 +30,7 @@ export default function Contact() {
       return
     }
     setStatus(SENT_MSG)
+    trackEvent('contact')
     window.location.href = buildMailto(req)
   }
 

@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import { localDate, zonedParts, WEEKDAYS, addDaysDate } from "./time.mjs";
 import { STATUSES, LEVELS } from "./db.mjs";
+import { visitStats } from "./tracking.mjs";
 
 /** Next scheduled run (HK time) from config.schedule. */
 export const STATUS_LABEL = {
@@ -47,11 +48,14 @@ export function buildSummary(ctx) {
   const prev = runs.filter((r) => r.finished_at)[1];
   const since = prev?.started_at || "1970-01-01";
   const newReplies = db.prepare(`SELECT r.*, s.name_zh, s.name_en FROM replies r LEFT JOIN schools s ON s.id = r.school_id WHERE r.detected_at >= ? ORDER BY r.detected_at DESC LIMIT 100`).all(since);
+  const newVisits = db.prepare(`SELECT v.*, s.name_zh, s.name_en, s.level FROM visits v LEFT JOIN schools s ON s.id = v.school_id
+    WHERE v.counted = 1 AND v.pulled_at >= ? ORDER BY v.ts DESC LIMIT 200`).all(since);
+  const visitedSchools = db.prepare("SELECT COUNT(DISTINCT school_id) c FROM visits WHERE counted = 1 AND school_id IS NOT NULL").get().c;
   const errors = db.prepare(`SELECT s.id, s.name_zh, s.level, st.stop_reason, st.updated_at FROM school_state st JOIN schools s ON s.id = st.school_id WHERE st.status = 'error' ORDER BY st.updated_at DESC LIMIT 100`).all();
   return {
     generatedAt: now.toISOString(), enabled: cfg.enabled !== false, testRecipient: cfg.testRecipient || "",
     total: Object.values(byStatus).reduce((a, b) => a + b, 0), byStatus, byLevel, sentToday, totalSent,
-    lastRun: lastFinished || null, newReplies, errors, runs, next: nextScheduled(cfg, now),
+    lastRun: lastFinished || null, newReplies, newVisits, visitedSchools, errors, runs, next: nextScheduled(cfg, now),
   };
 }
 
@@ -69,6 +73,8 @@ export function renderText(s) {
   L.push(`下次排程：${s.next ? `${s.next.when}（${s.next.kind}）` : "-"}`);
   L.push("", `上次執行以來的新回覆（${s.newReplies.length}）：`);
   for (const r of s.newReplies.slice(0, 30)) L.push(`  [${r.category}] ${r.name_zh || r.name_en || r.school_id}：${r.summary}`);
+  L.push("", `曾瀏覽網站的學校：${s.visitedSchools}；上次執行以來的新瀏覽（${s.newVisits.length}）：`);
+  for (const v of s.newVisits.slice(0, 30)) L.push(`  [${v.event === "contact" ? "按預約示範" : "瀏覽"}] ${v.name_zh || v.name_en || v.school_id}（${v.level || ""}）${v.ts}`);
   L.push("", `錯誤學校（${s.errors.length}）：`);
   for (const e of s.errors.slice(0, 30)) L.push(`  ${e.id} ${e.name_zh || ""}：${(e.stop_reason || "").slice(0, 120)}`);
   return L.join("\n");
@@ -77,10 +83,16 @@ export function renderText(s) {
 const esc = (t) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export function renderHtml(ctx, s) {
-  const rows = ctx.db.prepare(`SELECT s.id, s.name_zh, s.name_en, s.level, s.district, s.email, st.status, st.emails_sent, st.last_sent_at, st.stop_reason,
+  const schoolRows = ctx.db.prepare(`SELECT s.id, s.name_zh, s.name_en, s.level, s.district, s.email, st.status, st.emails_sent, st.last_sent_at, st.stop_reason,
       (SELECT category || '：' || IFNULL(summary,'') FROM replies r WHERE r.school_id = s.id AND r.category <> 'auto_reply' ORDER BY r.id DESC LIMIT 1) reply
-    FROM schools s JOIN school_state st ON st.school_id = s.id ORDER BY s.level, s.district, s.id`).all()
-    .map((r) => [r.id, r.name_zh || r.name_en, r.level, r.district, r.status, r.emails_sent, r.last_sent_at ? localDate(new Date(r.last_sent_at), ctx.cfg.timezone) : "", r.reply || (r.status === "error" ? r.stop_reason : "") || ""]);
+    FROM schools s JOIN school_state st ON st.school_id = s.id ORDER BY s.level, s.district, s.id`).all();
+  const vs = visitStats(ctx.db);
+  const visitCell = (id) => {
+    const v = vs.get(id);
+    if (!v) return "";
+    return `${v.visits} 次${v.contacts ? `，按預約 ${v.contacts} 次` : ""}（最近 ${localDate(new Date(v.last_ts), ctx.cfg.timezone)}）`;
+  };
+  const rows = schoolRows.map((r) => [r.id, r.name_zh || r.name_en, r.level, r.district, r.status, r.emails_sent, r.last_sent_at ? localDate(new Date(r.last_sent_at), ctx.cfg.timezone) : "", visitCell(r.id), r.reply || (r.status === "error" ? r.stop_reason : "") || ""]);
   const data = JSON.stringify(rows).replace(/</g, "\\u003c");
   const card = (k, v) => `<div class="card"><div class="v">${esc(v)}</div><div class="k">${esc(k)}</div></div>`;
   return `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -99,28 +111,31 @@ table{border-collapse:collapse;width:100%}th,td{border-bottom:1px solid var(--li
 <div class="mut">更新時間 ${esc(s.generatedAt)} · 下次排程 ${esc(s.next ? `${s.next.when}（${s.next.kind}）` : "-")}</div>
 ${s.enabled ? "" : '<div class="warn">config.enabled = false：已停用（kill switch）</div>'}
 ${s.testRecipient ? `<div class="warn">測試模式：所有電郵寄往 ${esc(s.testRecipient)}</div>` : ""}
-<h2>摘要</h2><div class="cards">${card("學校", s.total)}${card("累計寄出", s.totalSent)}${card("今日寄出", s.sentToday)}${Object.entries(s.byStatus).filter(([, v]) => v).map(([k, v]) => card(lbl(k), v)).join("")}</div>
+<h2>摘要</h2><div class="cards">${card("學校", s.total)}${card("累計寄出", s.totalSent)}${card("今日寄出", s.sentToday)}${card("曾瀏覽網站", s.visitedSchools)}${Object.entries(s.byStatus).filter(([, v]) => v).map(([k, v]) => card(lbl(k), v)).join("")}</div>
 <h2>按級別</h2><div class="tw"><table><tr><th>級別</th>${Object.keys(s.byStatus).map((k) => `<th>${esc(lbl(k))}</th>`).join("")}</tr>
 ${Object.entries(s.byLevel).map(([lv, c]) => `<tr><td>${lv}</td>${Object.keys(s.byStatus).map((k) => `<td>${c[k] || 0}</td>`).join("")}</tr>`).join("")}</table></div>
 <h2>上次執行以來的新回覆（${s.newReplies.length}）</h2>
 <div class="tw"><table><tr><th>學校</th><th>類別</th><th>摘要</th><th>時間</th></tr>${s.newReplies.map((r) => `<tr><td>${esc(r.name_zh || r.name_en || r.school_id)}</td><td>${esc(r.category)}</td><td>${esc(r.summary)}</td><td>${esc(r.received_at)}</td></tr>`).join("") || '<tr><td colspan="4" class="mut">沒有</td></tr>'}</table></div>
+<h2>上次執行以來的網站瀏覽（${s.newVisits.length}）</h2>
+<div class="mut">按電郵連結的參考編號計算；寄出後 ${esc(ctx.cfg.tracking?.ignoreSecondsAfterSend ?? 120)} 秒內的瀏覽（多為郵件保安掃描）不計。轉寄後由其他老師打開亦會計入同一間學校。</div>
+<div class="tw"><table><tr><th>學校</th><th>級別</th><th>動作</th><th>裝置</th><th>時間</th></tr>${s.newVisits.map((v) => `<tr><td>${esc(v.name_zh || v.name_en || v.school_id)}</td><td>${esc(v.level)}</td><td>${v.event === "contact" ? "按預約示範" : "瀏覽"}</td><td>${esc(v.device)}</td><td>${esc(v.ts)}</td></tr>`).join("") || '<tr><td colspan="5" class="mut">沒有</td></tr>'}</table></div>
 <h2>學校</h2>
 <div class="f"><input id="q" placeholder="搜尋名稱／地區／回覆" size="28"><select id="lv"><option value="">全部級別</option>${LEVELS.map((l) => `<option>${l}</option>`).join("")}</select>
-<select id="stt"><option value="">全部狀態</option>${STATUSES.map((x) => `<option value="${x}">${esc(lbl(x))}</option>`).join("")}</select><span id="cnt" class="mut"></span></div>
-<div class="tw"><table id="t"><thead><tr><th>ID</th><th>學校</th><th>級別</th><th>地區</th><th>狀態</th><th>已寄</th><th>最後寄出</th><th>回覆／錯誤</th></tr></thead><tbody></tbody></table></div>
+<select id="stt"><option value="">全部狀態</option>${STATUSES.map((x) => `<option value="${x}">${esc(lbl(x))}</option>`).join("")}</select><label><input type="checkbox" id="vis"> 只看曾瀏覽網站</label><span id="cnt" class="mut"></span></div>
+<div class="tw"><table id="t"><thead><tr><th>ID</th><th>學校</th><th>級別</th><th>地區</th><th>狀態</th><th>已寄</th><th>最後寄出</th><th>瀏覽網站</th><th>回覆／錯誤</th></tr></thead><tbody></tbody></table></div>
 <h2>執行紀錄</h2>
 <div class="tw"><table><tr><th>開始</th><th>結束</th><th>模式</th><th>寄出</th><th>回覆</th><th>錯誤</th><th>結果</th><th>備註</th></tr>
 ${s.runs.map((r) => `<tr><td>${esc(r.started_at)}</td><td>${esc(r.finished_at || "")}</td><td>${esc(r.mode)}</td><td>${r.sent}</td><td>${r.replies}</td><td>${r.errors}</td><td>${esc(r.status || "")}</td><td>${esc(r.note || "")}</td></tr>`).join("") || '<tr><td colspan="8" class="mut">沒有</td></tr>'}</table></div>
 <script>
 const D=${data};let sk=-1,sd=1;const tb=document.querySelector("#t tbody");
 const e=t=>String(t??"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
-function draw(){const q=document.getElementById("q").value.toLowerCase(),lv=document.getElementById("lv").value,st=document.getElementById("stt").value;
-let r=D.filter(x=>(!lv||x[2]===lv)&&(!st||x[4]===st)&&(!q||x.join(" ").toLowerCase().includes(q)));
+function draw(){const q=document.getElementById("q").value.toLowerCase(),lv=document.getElementById("lv").value,st=document.getElementById("stt").value,vi=document.getElementById("vis").checked;
+let r=D.filter(x=>(!lv||x[2]===lv)&&(!st||x[4]===st)&&(!vi||x[7])&&(!q||x.join(" ").toLowerCase().includes(q)));
 if(sk>=0)r=r.slice().sort((a,b)=>(typeof a[sk]==="number"?a[sk]-b[sk]:String(a[sk]).localeCompare(String(b[sk]),"zh-Hant"))*sd);
 document.getElementById("cnt").textContent=r.length+" / "+D.length;
 tb.innerHTML=r.slice(0,3000).map(x=>"<tr>"+x.map((c,i)=>"<td>"+(i===4?'<span class="st">'+e(c)+"</span>":e(c))+"</td>").join("")+"</tr>").join("");}
 document.querySelectorAll("#t th").forEach((th,i)=>th.onclick=()=>{sd=sk===i?-sd:1;sk=i;draw();});
-["q","lv","stt"].forEach(id=>document.getElementById(id).addEventListener("input",draw));draw();
+["q","lv","stt","vis"].forEach(id=>document.getElementById(id).addEventListener("input",draw));draw();
 </script></body></html>`;
 }
 

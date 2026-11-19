@@ -7,6 +7,8 @@ export interface DemoRequest {
   email: string
   tel: string
   funds: string[]
+  /** Link code from an outreach email (?r=), if the visitor came from one. */
+  ref?: string
 }
 
 export const EMAIL_RE = /^\S+@\S+\.\S+$/
@@ -29,6 +31,7 @@ export function buildMailto(r: DemoRequest): string {
     `電郵：${r.email.trim()}`,
     `電話：${r.tel.trim()}`,
     `想了解的資助：${r.funds.join('、')}`,
+    ...(r.ref ? [`參考編號：${r.ref}`] : []),
   ].join('\r\n')
   return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 }

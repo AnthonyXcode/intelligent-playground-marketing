@@ -1,9 +1,13 @@
 // Template markup -> HTML / plain text.
-// toHtml is identical to _build/mailer/send.mjs: **bold** -> <b>, an image line
-// ![alt](url) -> <img>, and every line after the image is small grey text.
+// toHtml follows _build/mailer/send.mjs (**bold** -> <b>, an image line
+// ![alt](url) -> <img>, every line after the image is small grey text) and also turns
+// http(s) URLs into links.
 export function toHtml(md) {
   const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  // http(s) links become <a>; a tracking code (?r=XXXXXXXXXX) stays in href but not in the visible text.
+  const link = (t) => t.replace(/https?:\/\/[^\s<>"]+[^\s<>".,!?:;]/g, (u) =>
+    `<a href="${u}" style="color:#0b6b4f">${u.replace(/\?r=[A-Za-z0-9]{10}$/, "")}</a>`);
+  const inline = (t) => link(esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"));
   const out = [];
   let small = false;
   for (const line of md.split("\n")) {

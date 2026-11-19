@@ -24,6 +24,10 @@ export const DEFAULTS = {
   bannedTermsByLevel: { KG: ["MVPA60", "智」啟學教", "智啟學教", "升中", "全方位學習"] },
   includeFlaggedContacts: false,
   campaigns: {},
+  tracking: {
+    enabled: true, siteUrl: "https://www.intelligent-playground.com/", apiBase: "https://www.intelligent-playground.com",
+    param: "r", ignoreSecondsAfterSend: 120,
+  },
 };
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);

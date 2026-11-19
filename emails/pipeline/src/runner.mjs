@@ -3,6 +3,7 @@ import { acquireLock } from "./lock.mjs";
 import { checkReplies } from "./replies.mjs";
 import { sendDue } from "./sender.mjs";
 import { writeReport } from "./report.mjs";
+import { pullVisits } from "./tracking.mjs";
 import { zonedParts, localDate } from "./time.mjs";
 
 /** --scheduled: send on a send day after sendTime (until sendWindowEndHour) if no send run completed today. */
@@ -38,6 +39,8 @@ export async function runPipeline(ctx, { dryRun = false, checkOnly = false, sche
       if (me !== cfg.sender.email.toLowerCase()) throw Object.assign(new Error(`Logged in as ${me} but config.sender.email is ${cfg.sender.email}. Run ./emails/scripts/setup.sh and log in with the right account.`), { name: "AuthError" });
       const r = await checkReplies(ctx);
       result.replies = r.newReplies; result.errors += r.errors; result.replyList = r.replies; hold = r.hold || hold;
+      const v = await pullVisits(ctx);
+      result.visits = v.counted;
     } else log.info("dry-run: reply check skipped, nothing is sent and no state or labels change");
     if (mode === "send" || mode === "dry-run") {
       const s = await sendDue(ctx, { dryRun: mode === "dry-run", limit, hold });
@@ -54,7 +57,7 @@ export async function runPipeline(ctx, { dryRun = false, checkOnly = false, sche
       .run(ctx.now().toISOString(), result.sent, result.replies, result.errors, status, note, runId);
     try { writeReport(ctx); } catch (e) { log.error(`report: ${e.message}`); }
     release();
-    log.info(`=== run ${runId} end: ${status}, sent ${result.sent}${mode === "dry-run" ? " (previews)" : ""}, new replies ${result.replies}, errors ${result.errors}`);
+    log.info(`=== run ${runId} end: ${status}, sent ${result.sent}${mode === "dry-run" ? " (previews)" : ""}, new replies ${result.replies}, link visits ${result.visits ?? 0}, errors ${result.errors}`);
   }
   result.status = status;
   return result;

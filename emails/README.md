@@ -136,6 +136,18 @@ npm 一律使用公開 registry（`emails/pipeline/.npmrc`：`registry=https://r
 更新 `emails/data/schools.csv` 後執行 `./emails/scripts/setup.sh`（或 `cd emails/pipeline && node src/cli.mjs import`）。
 重新匯入**不會**令已取消訂閱或電郵退回的學校再收到電郵（按學校 ID 及電郵地址記錄）。
 
+### 網站瀏覽追蹤
+
+電郵內所有 intelligent-playground.com 連結都會自動加上該校的參考編號（例如 `?r=k7Q2xP9a3B`，隨機產生，不含學校名稱）。學校打開網站並停留約 3 秒，網站會記錄一次「瀏覽」；在網站按「預約到校示範」會記錄一次「按預約示範」，而電郵內文會附上參考編號。
+
+- 每次執行（包括每日 18:00 檢查）會讀取新瀏覽紀錄；`status.sh` 及 `report.html` 會顯示「曾瀏覽網站」的學校及最近瀏覽時間。
+- 立即讀取：`cd emails/pipeline && node src/cli.mjs visits`
+- 只知道是**哪間學校**，不知道是哪位老師（電郵被轉寄亦計入同一間學校）。
+- 郵件保安掃描會自動打開連結：網站只在頁面真正顯示後才記錄，而寄出後 120 秒內的瀏覽不計（`config.json` 的 `tracking.ignoreSecondsAfterSend`）。
+- 網站只儲存參考編號、時間及裝置類別（電腦／手機／平板），不儲存 IP 地址。
+- 讀取紀錄需要 `emails/secrets/tracking.json`（`{"readKey": "..."}`，與 Vercel 的 `TRACKING_READ_KEY` 相同）。請從建立金鑰的 Mac 複製到執行排程的 Mac，`chmod 600`。不要提交到 Git。
+- 關閉追蹤：`config.json` 設 `"tracking": { "enabled": false }`。
+
 ## 五、緊急停止（kill switch）
 
 把 `emails/config.json` 的 `"enabled"` 改為 `false`：

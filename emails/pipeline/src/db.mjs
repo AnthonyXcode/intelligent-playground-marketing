@@ -30,6 +30,13 @@ CREATE TABLE IF NOT EXISTS replies (
 CREATE TABLE IF NOT EXISTS suppressions (
   email TEXT PRIMARY KEY, reason TEXT, school_id TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS seen_messages (gmail_id TEXT PRIMARY KEY, note TEXT, seen_at TEXT);
+CREATE TABLE IF NOT EXISTS link_tokens (
+  school_id TEXT PRIMARY KEY, token TEXT NOT NULL UNIQUE, created_at TEXT);
+CREATE TABLE IF NOT EXISTS visits (
+  id TEXT PRIMARY KEY, token TEXT, school_id TEXT, event TEXT, ts TEXT, device TEXT,
+  counted INTEGER NOT NULL DEFAULT 1, note TEXT, pulled_at TEXT);
+CREATE INDEX IF NOT EXISTS visits_school ON visits(school_id);
+CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT, started_at TEXT, finished_at TEXT, mode TEXT,
   sent INTEGER NOT NULL DEFAULT 0, replies INTEGER NOT NULL DEFAULT 0, errors INTEGER NOT NULL DEFAULT 0,

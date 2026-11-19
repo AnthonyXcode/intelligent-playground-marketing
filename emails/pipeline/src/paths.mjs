@@ -15,6 +15,7 @@ export function resolvePaths(root = process.env.IP_EMAILS_DIR || path.resolve(he
     secrets,
     clientSecret: path.join(secrets, "client_secret.json"),
     token: path.join(secrets, "token.json"),
+    trackingKey: path.join(secrets, "tracking.json"),
     state,
     db: path.join(state, "outreach.db"),
     logs: path.join(state, "logs"),

@@ -9,6 +9,7 @@ import { validateEmail } from "./validate.mjs";
 import { dayDiff, localDate, addDaysDate } from "./time.mjs";
 import { loadConfig } from "./config.mjs";
 import { hasUnseenInbound } from "./replies.mjs";
+import { tokenFor, trackLinks } from "./tracking.mjs";
 
 const SENDABLE = "('pending','active')";
 
@@ -93,7 +94,9 @@ export async function compose(ctx, r) {
     inReplyTo = ids.at(-1) || null;
     references = ids.join(" ") || null;
   }
-  const full = `${body}\n\n${content.signature}`;
+  // Links to the product site get the school's code (?r=) so visits can be matched to the school.
+  // body (stored and shown to the AI as history) keeps the plain link.
+  const full = trackLinks(`${body}\n\n${content.signature}`, cfg.tracking?.enabled ? tokenFor(db, r.id) : null, cfg);
   const to = cfg.testRecipient || r.email;
   const errs = validateEmail({ subject, body, full, isFollowup: n > 1, to, level: r.level }, cfg);
   if (errs.length) { const e = new Error(`validation failed: ${errs.join("; ")}`); e.validation = errs; throw e; }

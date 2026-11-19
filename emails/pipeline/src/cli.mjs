@@ -9,6 +9,7 @@
 //   init                                                        create DB + import data/schools.csv
 //   import                                                      re-import data/schools.csv
 //   status                                                      print summary + write state/report.html
+//   visits                                                      pull link visits from the site now
 //   plist --run-sh <path> --path <PATH> [--out <file>]          print/write the launchd plist
 import fs from "node:fs";
 import os from "node:os";
@@ -22,6 +23,7 @@ import { runPipeline } from "./runner.mjs";
 import { writeReport, renderText } from "./report.mjs";
 import { scheduleSlots, buildPlist, LABEL } from "./launchd.mjs";
 import { tzOffsetMinutes } from "./time.mjs";
+import { pullVisits } from "./tracking.mjs";
 
 const argv = process.argv.slice(2);
 const cmd = argv[0];
@@ -146,6 +148,17 @@ async function main() {
       console.log(`\n報告：${paths.report}`);
       return 0;
     }
+    case "visits": {
+      const db = openDb(paths.db);
+      const r = await pullVisits(ctxBase(db));
+      for (const v of r.fresh) {
+        const s = db.prepare("SELECT name_zh, name_en, level FROM schools WHERE id = ?").get(v.school_id) || {};
+        console.log(`${v.ts}  ${v.event === "contact" ? "按預約示範" : "瀏覽"}  ${s.name_zh || s.name_en || v.school_id} [${s.level || "?"}]`);
+      }
+      console.log(r.ok ? `新瀏覽 ${r.counted}（共讀取 ${r.pulled} 筆）` : "未能讀取瀏覽紀錄，詳見 log");
+      writeReport(ctxBase(db));
+      return r.ok ? 0 : 1;
+    }
     case "plist": {
       const { slots, deltaMinutes, localTz } = scheduleSlots(cfg);
       if (deltaMinutes !== 0) {
@@ -159,7 +172,7 @@ async function main() {
       return 0;
     }
     default:
-      console.error("usage: node src/cli.mjs run|retry-errors|reactivate|reset-test|login|whoami|labels|init|import|status|plist");
+      console.error("usage: node src/cli.mjs run|retry-errors|reactivate|reset-test|login|whoami|labels|init|import|status|visits|plist");
       return 64;
   }
 }
