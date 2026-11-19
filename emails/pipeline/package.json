@@ -1,0 +1,14 @@
+{
+  "name": "ip-outreach-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Intelligent Playground school email outreach pipeline (Gmail API + claude -p)",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "test": "node --no-warnings=ExperimentalWarning --test --test-concurrency=1 \"test/*.test.mjs\""
+  },
+  "dependencies": {
+    "googleapis": "189.0.0"
+  }
+}

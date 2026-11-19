@@ -23,3 +23,10 @@ _build/html/
 # Local backups made while editing
 _build/index.before-*.html
 _build/ppt/build.before-*.js
+
+# Outreach pipeline: secrets and runtime state. Never commit.
+emails/secrets/
+emails/state/
+
+# Local editor/tool config
+.serena/

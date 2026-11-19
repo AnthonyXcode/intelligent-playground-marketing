@@ -1,0 +1,29 @@
+[
+  {
+    "sample": "interested-zh",
+    "email_text": "陳先生你好，\n我是體育科主任李老師，校長轉交了你的電郵。我們有興趣了解，請問一月中可否到校示範？另外想知大約價錢。\n李老師\n\n> 原郵件：智能運動場…",
+    "output": {
+      "category": "interested",
+      "summary": "體育科主任李老師有興趣，想約一月中到校示範，並查詢大約價錢",
+      "stop": true
+    }
+  },
+  {
+    "sample": "auto_reply-en",
+    "email_text": "Automatic reply: Thank you for your email. I am out of office until 2 December with limited access to email. For urgent matters please contact the school office at 2345 6789.",
+    "output": {
+      "category": "auto_reply",
+      "summary": "自動回覆：收件人休假至12月2日，急事可致電學校校務處。",
+      "stop": false
+    }
+  },
+  {
+    "sample": "unsubscribe-zh",
+    "email_text": "本校不需要此類產品，請勿再發送推廣電郵，謝謝。",
+    "output": {
+      "category": "unsubscribe",
+      "summary": "學校表示不需要此類產品，要求停止發送推廣電郵",
+      "stop": true
+    }
+  }
+]

@@ -1,0 +1,183 @@
+[
+  {
+    "id": "t1",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題1",
+    "angle": "角度1",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t2",
+    "levels": [
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題2",
+    "angle": "角度2",
+    "facts": [
+      "F-DRIBBLE",
+      "F-KGONLY"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t3",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題3",
+    "angle": "角度3",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t4",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題4",
+    "angle": "角度4",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t5",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題5",
+    "angle": "角度5",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "final-close",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "final": true,
+    "title": "最後一封",
+    "angle": "結束",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "隨時回覆"
+  },
+  {
+    "id": "t6",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題6",
+    "angle": "角度6",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t7",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題7",
+    "angle": "角度7",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t8",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題8",
+    "angle": "角度8",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t9",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題9",
+    "angle": "角度9",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t10",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題10",
+    "angle": "角度10",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  },
+  {
+    "id": "t11",
+    "levels": [
+      "KG",
+      "PRI",
+      "SEC",
+      "SPE"
+    ],
+    "title": "主題11",
+    "angle": "角度11",
+    "facts": [
+      "F-PRODUCT"
+    ],
+    "cta": "回覆此電郵"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "_comment": "Pipeline settings (no secrets). enabled=false is the kill switch. testRecipient: if set, every email goes there with 【測試】 in the subject. Times are in timezone.",
+  "enabled": true,
+  "timezone": "Asia/Hong_Kong",
+  "sender": { "email": "anthonychan@antapp.ai", "name": "Anthony Chan" },
+  "testRecipient": "",
+  "testMaxPerRun": 3,
+  "schedule": { "sendDays": ["Tue", "Fri"], "sendTime": "10:00", "checkTime": "18:00", "sendWindowEndHour": 20 },
+  "maxPerRun": 150,
+  "maxPerDay": 400,
+  "delaySeconds": [20, 60],
+  "maxEmailsPerSchool": 10,
+  "minDaysBetween": 3,
+  "levelOrder": ["PRI", "SEC", "SPE", "KG"],
+  "replySearchDays": 30,
+  "genericDomains": [
+    "gmail.com", "googlemail.com", "yahoo.com", "yahoo.com.hk", "ymail.com", "hotmail.com", "hotmail.com.hk",
+    "outlook.com", "live.com", "live.hk", "msn.com", "icloud.com", "me.com", "netvigator.com", "biznetvigator.com",
+    "hkbn.net", "i-cable.com", "163.com", "126.com", "qq.com", "sina.com", "edb.gov.hk", "school.hk", "hkedcity.net"
+  ],
+  "labels": { "replied": "IP/已回覆", "unsubscribed": "IP/取消訂閱" },
+  "claude": { "bin": "claude", "model": "", "timeoutSeconds": 120, "retries": 1 },
+  "limits": { "subjectMaxChars": 80, "firstBodyMaxChars": 2500, "followupBodyMaxChars": 600, "followupMaxBullets": 4 },
+  "_campaigns": "Optional per-campaign content for ./emails/scripts/run.sh --reactivate --campaign <name>: { \"<name>\": { \"templatesDir\": \"campaigns/<name>/templates\", \"topics\": \"campaigns/<name>/topics.json\" } } (paths under emails/content/; omitted = default templates/topics).",
+  "campaigns": {},
+  "bannedTerms": ["Google", "ML Kit", "MediaPipe", "RK3588", "Android", "Flutter", "Strapi", "Robocoach"],
+  "bannedClaims": ["徽章", "獎勵", "社交媒體", "團隊合作挑戰", "團隊挑戰", "家長短訊", "短訊通知", "影像永不離開", "完全不收集相片", "免費"]
+}

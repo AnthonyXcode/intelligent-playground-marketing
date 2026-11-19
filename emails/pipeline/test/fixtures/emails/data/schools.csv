@@ -1,0 +1,8 @@
+id,level,name_zh,name_en,district,address,email,website,phone,principal,source,notes
+KG001,KG,快樂幼稚園,Happy KG,沙田,地址1,info@happykg.edu.hk,,,,fixture,
+PRI001,PRI,"測試小學, 甲",Test Primary A,觀塘,地址2,office@tpa.edu.hk,,,陳大文,fixture,
+PRI002,PRI,測試小學乙,Test Primary B,中西區,地址3,MAIL@TPB.EDU.HK,,,歐陽小明,fixture,
+SEC001,SEC,測試中學,Test Secondary,葵青,地址4,info@tsec.edu.hk,,,,fixture,
+SPE001,SPE,測試特殊學校,Test Special,九龍城,地址5,spe@tspe.edu.hk,,,李校長,fixture,
+SEC002,SEC,沒有電郵中學,No Email Sec,灣仔,地址6,,,,,fixture,
+BAD001,XX,壞資料,Bad,,,bad@bad.hk,,,,fixture,
