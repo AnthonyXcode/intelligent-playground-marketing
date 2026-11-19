@@ -19,14 +19,17 @@ test("toHtml: bold, escaping, image line, small grey after image", () => {
   assert.ok(htmlDocument(SAMPLE).startsWith("<!DOCTYPE html>"));
 });
 
-test("toHtml is identical to _build/mailer/send.mjs toHtml", (t) => {
+test("_build/mailer/send.mjs renders with this markup.mjs (no separate copy)", (t) => {
   const f = path.resolve(here, "../../../_build/mailer/send.mjs");
   if (!fs.existsSync(f)) return t.skip("send.mjs not present");
   const src = fs.readFileSync(f, "utf8");
-  const body = src.slice(src.indexOf("function toHtml(md)"));
-  const fnSrc = body.slice(0, body.indexOf("\n}\n") + 2);
-  const ref = new Function(`${fnSrc}; return toHtml;`)();
-  for (const s of [SAMPLE, fs.readFileSync(path.resolve(here, "fixtures/emails/content/signature.md"), "utf8")]) assert.equal(toHtml(s), ref(s));
+  assert.match(src, /import \{ toHtml \} from "\.\.\/\.\.\/emails\/pipeline\/src\/markup\.mjs"/);
+  assert.ok(!src.includes("function toHtml("), "send.mjs must not define its own toHtml");
+});
+
+test("toHtml links URLs; a tracking code stays in href only", () => {
+  const h = toHtml("了解更多：**https://www.intelligent-playground.com/?r=Ab3dEf7hJk**。");
+  assert.ok(h.includes('<b><a href="https://www.intelligent-playground.com/?r=Ab3dEf7hJk" style="color:#0b6b4f">https://www.intelligent-playground.com/</a></b>。'));
 });
 
 test("toText strips ** and the image line", () => {
