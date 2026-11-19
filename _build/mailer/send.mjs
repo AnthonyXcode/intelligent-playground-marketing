@@ -1,7 +1,7 @@
 // Send an outreach email through Gmail web using Playwright.
 //
 // Usage:
-//   node send.mjs --to someone@school.edu.hk --name 陳校長 --school 葵涌循道中學 [--test]
+//   node send.mjs --to someone@school.edu.hk --name 陳校長 --school 葵涌循道中學 [--test] [--ref CODE10CHAR]
 //
 // Template: emails/school-outreach.md (first line 「主旨：...」 is the subject; **bold** and ![alt](url) images supported).
 //
@@ -16,6 +16,8 @@ import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { toHtml } from "../../emails/pipeline/src/markup.mjs";
+import { trackLinks, TOKEN_RE } from "../../emails/pipeline/src/tracking.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const marketing = path.resolve(here, "../..");
@@ -44,27 +46,12 @@ const left = filled.match(/\{\{\w+\}\}/g);
 if (left) { console.error("Unfilled placeholders:", [...new Set(left)].join(", ")); process.exit(1); }
 const [first, ...lines] = filled.split("\n");
 const subject = (flag("--test") ? "【測試】" : "") + first.replace(/^主旨[:：]\s*/, "").trim();
-const html = toHtml(lines.join("\n").trim());
-
-// Template markup: **bold**, ![alt](url) on its own line = image. Everything after
-// the image (unsubscribe note, address, NOTICE) is rendered as small grey text.
-function toHtml(md) {
-  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const inline = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  const out = [];
-  let small = false;
-  for (const line of md.split("\n")) {
-    const img = line.match(/^!\[([^\]]*)\]\((https?:[^)\s]+)\)\s*$/);
-    if (img) {
-      out.push(`<img src="${esc(img[2])}" alt="${esc(img[1])}" width="64" height="64" style="display:block;margin:12px 0">`);
-      small = true;
-      continue;
-    }
-    const text = line ? inline(line) : "";
-    out.push(small && text ? `<span style="font-size:11px;color:#777777">${text}</span>` : text);
-  }
-  return `<div style="font-family:Arial,'Microsoft JhengHei',sans-serif;font-size:14px;line-height:1.6;color:#222222">${out.join("<br>")}</div>`;
-}
+// --ref CODE: add ?r=CODE to links to the product site (same as the pipeline), so a click can be checked.
+const ref = opt("--ref");
+if (ref && !TOKEN_RE.test(ref)) { console.error("--ref must be 10 letters/digits, e.g. TESTanthon"); process.exit(1); }
+const body = trackLinks(lines.join("\n").trim(), ref, { tracking: { enabled: !!ref, siteUrl: "https://www.intelligent-playground.com/", param: "r" } });
+// Markup (**bold**, image line, small grey footer, links) is rendered by the pipeline's markup.mjs.
+const html = toHtml(body);
 
 let browser;
 try {
