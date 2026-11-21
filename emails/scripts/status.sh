@@ -11,7 +11,7 @@ fi
 (cd "$EMAILS_DIR/pipeline" && node --no-warnings=ExperimentalWarning src/cli.mjs status)
 echo
 if launchctl print "gui/$UID/$LABEL" >/dev/null 2>&1; then
-  echo "launchd 排程：已載入（$LABEL）"
+  echo "launchd 排程：已載入（${LABEL}）"
   launchctl print "gui/$UID/$LABEL" 2>/dev/null | grep -E '^[[:space:]]*(state|last exit code|runs) ' | sed 's/^[[:space:]]*/  /' || true
 else
   echo "launchd 排程：未載入（執行 ./emails/scripts/start.sh 啟動）"
